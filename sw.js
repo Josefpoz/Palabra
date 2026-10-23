@@ -1,1 +1,10 @@
-const CACHE='palabra-05a3-1';const ASSETS=['./','./index.html','./style.css','./app.js','./words.js','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png','./icon-180.png'];self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()))});self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>(k.startsWith('palabra-05a-')||k.startsWith('palabra-05a1-')||k.startsWith('palabra-05a2-')||k.startsWith('palabra-05a3-'))&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});self.addEventListener('fetch',e=>{if(e.request.method!=='GET'||new URL(e.request.url).origin!==self.location.origin)return;e.respondWith(caches.match(e.request).then(hit=>hit||fetch(e.request)))})
+/* Palabra 0.5a.4: retirement worker; no fetch handler, no offline caching. */
+self.addEventListener('install', event => { event.waitUntil(self.skipWaiting()); });
+self.addEventListener('activate', event => {
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter(key => /^palabra[-_]/i.test(key)).map(key => caches.delete(key)));
+    await self.registration.unregister();
+    await self.clients.claim();
+  })());
+});

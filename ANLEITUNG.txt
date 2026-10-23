@@ -1,8 +1,13 @@
-Palabra 0.5a.3 – Interface Refinement
+PALABRA 0.5a.4 – STABILITÄTSUPDATE
 
-Alle Dateien gemeinsam in einen Ordner entpacken. index.html öffnen.
-Für iPhone-Tests auf GitHub Pages unter einem separaten Testpfad bereitstellen.
-Achtung: Daten werden weiterhin lokal gespeichert, ohne Cloud-Sync.
-Die App verwendet denselben lokalen Speicherschlüssel wie 0.5a.2; vor dem Test gegebenenfalls Backup exportieren.
+1. Alle Dateien aus dieser ZIP direkt ins Hauptverzeichnis des GitHub-Repositories Palabra hochladen.
+2. Bestehende Dateien ersetzen. sw.js MUSS ebenfalls ersetzt werden: er dient einmalig dazu, alte Service Worker abzulösen.
+3. Auf dem iPhone einmal in NORMALEM Safari öffnen (nicht privat):
+   https://josefpoz.github.io/Palabra/index.html?v=054
+   Diese neue URL umgeht den alten Cache-first-Service-Worker für die HTML-Seite.
+4. Wenn 0.5a.4 angezeigt wird, Seite einmal neu laden und dann die Home-Bildschirm-App öffnen.
+5. Falls nötig: Mehr → Updates → Aktuelle Version neu laden.
 
-Neu: Start mit Basis 1, nur Wiederholungs-Kategorienfilter, Wörter erst nach Entdeckung, Kategorien und Meisterungsstatistiken, Safe-Area und Header-Dekoration.
+WICHTIG: Lernfortschritt (localStorage) wird NICHT gelöscht.
+Die App benötigt nun eine Internetverbindung.
+Die einmalige URL mit ?v=054 ist wichtig, weil ein alter Service Worker die normale Startadresse weiterhin aus seinem Cache liefern kann.

@@ -27,3 +27,6 @@ body{padding-top:max(25px,env(safe-area-inset-top,0px))}
 .notch-garden{position:absolute;top:0;left:max(14px,env(safe-area-inset-left,0px));right:max(14px,env(safe-area-inset-right,0px));height:max(24px,env(safe-area-inset-top,0px));padding:0 8px;align-items:center;z-index:1}
 .notch-garden .garden-star,.notch-garden .garden-sun{max-width:30%;white-space:nowrap}
 @media(min-width:650px){.notch-garden{left:calc(50% - 140px);right:calc(50% - 140px)}}
+
+/* 0.5a.4: right side remains clear for iOS status indicators */
+.garden-empty{display:block;min-width:24px;height:1px}
