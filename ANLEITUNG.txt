@@ -1,13 +1,18 @@
-PALABRA 0.5a.4 – STABILITÄTSUPDATE
+PALABRA 0.6a.3 – STORIES-BIBLIOTHEK (TESTVERSION)
 
-1. Alle Dateien aus dieser ZIP direkt ins Hauptverzeichnis des GitHub-Repositories Palabra hochladen.
-2. Bestehende Dateien ersetzen. sw.js MUSS ebenfalls ersetzt werden: er dient einmalig dazu, alte Service Worker abzulösen.
-3. Auf dem iPhone einmal in NORMALEM Safari öffnen (nicht privat):
-   https://josefpoz.github.io/Palabra/index.html?v=054
-   Diese neue URL umgeht den alten Cache-first-Service-Worker für die HTML-Seite.
-4. Wenn 0.5a.4 angezeigt wird, Seite einmal neu laden und dann die Home-Bildschirm-App öffnen.
-5. Falls nötig: Mehr → Updates → Aktuelle Version neu laden.
+1. ZIP vollständig in einen neuen Ordner entpacken.
+2. index.html lokal in deinem Browser öffnen.
+3. Unter „Stories“ El gato que quiere viajar (A1/A2) oder La última función del Cine Luna (A2/B1) auswählen.
+4. Über die Niveau-Schalter frei wechseln; alle Kapitel sind direkt zugänglich.
+5. Wörter antippen für Übersetzung. 🌐 zeigt eine natürliche Satzübersetzung, wenn sie kuratiert ist, sonst eine entsprechend gekennzeichnete Wort-für-Wort-Lesehilfe.
+6. 💡 direkt daneben blendet Satzglieder für NUR diesen Satz ein. Mehrere Sätze dürfen parallel aktiv sein.
+7. Fragen sind freiwillig; Vokabel-SRS ist unabhängig.
 
-WICHTIG: Lernfortschritt (localStorage) wird NICHT gelöscht.
-Die App benötigt nun eine Internetverbindung.
-Die einmalige URL mit ?v=054 ist wichtig, weil ein alter Service Worker die normale Startadresse weiterhin aus seinem Cache liefern kann.
+WICHTIG: Der Grammatikblick ist ein weitgehend automatisch annotierter REDAKTIONSPROTOTYP.
+Alle Tokens besitzen eine Rolle, die grammatische Korrektheit komplexer Satzstrukturen ist noch nicht vollständig geprüft. Siehe ARBEITSPROZESS_STUDIO.md.
+
+Vokabeln und Lernstände bleiben im bisherigen lokalen Browser-Speicher. Bitte dennoch das JSON-Backup in der alten Version vor dem Wechsel exportieren; bei file:// kann ein anderer Ordner in manchen Browsern einen anderen Speicherbereich bekommen.
+
+Technische Storydaten: stories/catalog.json
+Lokale Dateiansicht: stories/catalog.js
+Reproduzierbarer Builder: story_tools/compile_library.py

@@ -1,20 +1,56 @@
 (()=>{'use strict';
-const KEY='palabra-foundation-05a2-v1';const DAY=86400000;const $=id=>document.getElementById(id);
+const KEY='palabra-foundation-05a2-v1';
+const DEV_KEY='palabra-dev-mode-v1';
+let devMode=false;try{devMode=localStorage.getItem(DEV_KEY)==='true'}catch(_){}
+window.PalabraDev={enabled:()=>devMode};const DAY=86400000;const $=id=>document.getElementById(id);
 const iso=(d=new Date())=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const addDays=(date,n)=>{const [y,m,d]=date.split('-').map(Number);const x=new Date(y,m-1,d+n);return iso(x)};
 const daysBetween=(a,b)=>{const toUtc=s=>{const [y,m,d]=s.split('-').map(Number);return Date.UTC(y,m-1,d)};return Math.round((toUtc(b)-toUtc(a))/DAY)};
 const intervals=[1,3,7,14,30,60,120,240];
 const MASTERED_FREE=7; // Vorläufig: sieben erfolgreiche freie Abrufe in Folge mit langfristigen Intervallen.
-const DECKS=["Erste Gespräche","Mein Alltag","Unterwegs & Kommunizieren","Erlebnisse & Gefühle","Alltag vertiefen"];
+const DECKS=["Erste Gespräche","Mein Alltag","Unterwegs & Reisen","Erlebnisse & Beziehungen","Freies Kommunizieren"];
 const newProgress=()=>({discoveredOn:null,introducedOn:null,passive:{due:null,level:0,freeDates:[],freeStreak:0,reviews:0,last:null},active:{unlocked:false,due:null,level:0,freeDates:[],freeStreak:0,reviews:0,last:null}});
 const seed=window.PALABRA_SEED||[];
 const WORD_CLASSES={noun:'Substantiv',verb:'Verb',adjective:'Adjektiv',adverb:'Adverb',phrase:'Wendung',pronoun:'Pronomen',determiner:'Begleiter',quantifier:'Mengenwort',interrogative:'Fragewort',preposition:'Präposition',conjunction:'Konjunktion',numeral:'Zahlwort',interjection:'Ausruf',particle:'Partikel',other:'Sonstiges'};
-function initial(){return{version:1,created:iso(),settings:{dailyNew:20,extraDate:null,extraBlocks:0},words:seed.map(w=>({...w,progress:newProgress()})),history:[]}}
+function initial(){return{version:1,created:iso(),settings:{dailyNew:20,extraDate:null,extraBlocks:0},words:seed.map(w=>({...w,progress:newProgress()})),history:[],collections:[]}}
 function validate(data){if(!data||data.version!==1||!Array.isArray(data.words)||!data.settings||!Array.isArray(data.history))throw Error('Ungültiges oder inkompatibles Palabra-Backup.');if(data.words.length>30000)throw Error('Zu viele Wörter im Backup.');for(const w of data.words){if(typeof w.es!=='string'||typeof w.de!=='string'||!w.progress||!w.progress.passive||!w.progress.active)throw Error('Beschädigte Vokabeleinträge.')}return data}
 let data;try{const stored=localStorage.getItem(KEY);data=stored?validate(JSON.parse(stored)):initial()}catch(e){data=initial();alert('Gespeicherte Daten konnten nicht gelesen werden. Bitte stelle ggf. ein Backup wieder her.')} 
 function save(){try{localStorage.setItem(KEY,JSON.stringify(data));return true}catch(e){alert('Speichern fehlgeschlagen! Bitte Speicherplatz prüfen und sofort ein Backup exportieren.');return false}}
+// Collections are references to canonical word IDs, not copies of progress.
+function normalizeCollections(){
+ if(!Array.isArray(data.collections))data.collections=[];
+ const validIds=new Set(data.words.map(w=>w.id));
+ const seen=new Set();
+ data.collections=data.collections.filter(c=>c&&typeof c.id==='string'&&typeof c.name==='string'&&Array.isArray(c.wordIds)&&!seen.has(c.id)&&seen.add(c.id)).slice(0,100).map(c=>({
+  id:c.id.slice(0,80),name:c.name.trim().slice(0,64)||'Sammlung',createdAt:typeof c.createdAt==='string'?c.createdAt:iso(),
+  wordIds:[...new Set(c.wordIds.filter(id=>typeof id==='string'&&validIds.has(id)))].slice(0,1000)
+ }));
+}
+normalizeCollections();
 if(!localStorage.getItem(KEY))save();
 
+// 0.5b.5: migrate all 1,000 canonical cards in-place, retaining SRS only for
+// identical Spanish entries at the same learning position. Never clear user data.
+function syncCuratedDecks(){
+ let changed=false;
+ const lookup=new Map(data.words.map((w,i)=>[`${w.deck_id}:${w.learning_order}`,i]));
+ for(const entry of seed){
+  const key=`${entry.deck_id}:${entry.learning_order}`;
+  const index=lookup.get(key);
+  if(index===undefined){
+   data.words.push({...entry,progress:newProgress()});
+   lookup.set(key,data.words.length-1);changed=true;continue;
+  }
+  const old=data.words[index];
+  const isSame=old.es.trim().toLocaleLowerCase('es')===entry.es.trim().toLocaleLowerCase('es');
+  if(old.id!==entry.id||old.es!==entry.es||old.de!==entry.de||old.learning_goal!==entry.learning_goal||old.category!==entry.category){
+    data.words[index]={...entry,progress:isSame?old.progress:newProgress()};changed=true;
+  }
+ }
+ if(changed)save();
+}
+syncCuratedDecks();
+normalizeCollections();
 if(!Number.isFinite(data.settings.extraBlocks))data.settings.extraBlocks=0;
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // Unlock only after three distinct calendar days of successful unaided passive recall,
@@ -48,6 +84,7 @@ function dailyAllowance(){return data.settings.dailyNew+20*extraBlocksToday()}
 function remainingFresh(){return data.words.filter(w=>!w.progress.passive.introducedOn).length}
 // Separate queues: passive introduces new cards; active practices already introduced words.
 // The direction and category are only session filters, never separate word databases.
+let wordsSubview='all', selectedCollectionId=null, collectionQuery='', pickerWordId=null;
 let selectedDirection='passive',selectedCategory='all',selectedDeck=data.settings.lastDeck||'palabra-basis-1',selectedPackage=data.settings.lastPackage||'next',statsDirection='passive';
 const isReviewOnly=()=>selectedDeck==='all'||selectedPackage==='all';
 const deckOf=w=>w.deck_id||'palabra-basis-1';
@@ -106,8 +143,9 @@ function updateHome(){
  const extra=$('extraBlockBtn');extra.hidden=isReviewOnly()||selectedDirection!=='passive'||remainingFresh()===0||introducedToday()<dailyAllowance()||!data.words.some(w=>deckFilter(w)&&inCategory(w)&&!w.progress.passive.introducedOn&&freshFilter(w));
  $('extraInfo').textContent=selectedDirection==='active'?'Aktiv sind Wörter nach 3 freien passiven Abrufen an unterschiedlichen Tagen und mindestens 7 Tagen Abstand verfügbar. Beide Richtungen haben getrennte Wiederholungen.':remainingFresh()===0?'Alle Basiswörter wurden eingeführt.':`Noch ${remainingFresh()} neue Wörter im Vorrat. Weitere 20er-Blöcke jederzeit möglich.`;
 }
+let sessionCollectionId=null;
 let queue=[],current=null,phase='question',mcOptions=[],selected=-1,mcCorrect=-1,sessionCompleted=0,sessionTotal=0,retries={},seenInSession=new Set(),sessionGrades={free:0,mc:0,unknown:0},sessionUnique=new Set(),sessionNew=0;
-function startSession(){queue=candidates(selectedDirection).slice(0,20);sessionCompleted=0;sessionTotal=queue.length;sessionGrades={free:0,mc:0,unknown:0};sessionUnique=new Set();sessionNew=0;retries={};seenInSession=new Set();current=null;nextCard();navigate('learn')}
+function startSession(items=null,collectionId=null){sessionCollectionId=collectionId;queue=(items||candidates(selectedDirection)).slice(0,20);sessionCompleted=0;sessionTotal=queue.length;sessionGrades={free:0,mc:0,unknown:0};sessionUnique=new Set();sessionNew=0;retries={};seenInSession=new Set();current=null;nextCard();navigate('learn')}
 function nextCard(){if(queue.length===0){current=null;renderStudy();return}current=queue.shift();const w=wordFor(current);if(w&&!w.progress.discoveredOn){w.progress.discoveredOn=iso();save()}phase='question';selected=-1;mcOptions=[];mcCorrect=-1;renderStudy()}
 function wordFor(item){return data.words.find(w=>w.id===item.id)}
 // MC uses the exact PDS word class in BOTH directions. Never use a different class
@@ -129,7 +167,7 @@ function makeOptions(w,dir){
  for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]]}return arr;
 }
 function cardTop(w){return `<div class="flashcard"><div class="direction">${current.dir==='passive'?'ESPAÑOL → DEUTSCH':'DEUTSCH → ESPAÑOL'}</div><h2>${escape(current.dir==='passive'?w.es:w.de)}</h2><div class="category">${escape(w.category||'Vokabel')} · ${escape(WORD_CLASSES[w.part_of_speech]||'Wort')}</div></div>`}
-function renderStudy(){const area=$('studyArea');$('sessionProgress').textContent=`${sessionCompleted} geschafft · ${queue.length+(current?1:0)} offen`;$('progressFill').style.width=`${Math.min(100,100*sessionCompleted/Math.max(1,sessionTotal))}%`;if(!current){const avail=candidates(selectedDirection);const more=avail.length>0;const canBonus=!isReviewOnly()&&selectedDirection==='passive'&&remainingFresh()>0&&introducedToday()>=dailyAllowance()&&data.words.some(w=>deckFilter(w)&&inCategory(w)&&!w.progress.passive.introducedOn&&freshFilter(w));const todayDone=introducedToday()>=20;const total=sessionGrades.free+sessionGrades.mc+sessionGrades.unknown;const percent=total?Math.round(100*sessionGrades.free/total):0;area.innerHTML=`<div class="empty finish"><div class="big-emoji">🎉</div><h2>${todayDone?'Tagesziel geschafft!':'¡Muy bien! Runde geschafft!'}</h2><p>${todayDone?'Dein empfohlenes Tagespaket ist erledigt. Du kannst stolz auf dich sein!':'Stark gemacht! Jeder freie Abruf bringt dich weiter.'}</p><div class="session-stats"><div><strong>${sessionUnique.size}</strong><small>Verschiedene Wörter</small></div><div><strong>${sessionNew}</strong><small>Neue Wörter</small></div><div><strong>${percent} %</strong><small>Frei gewusst</small></div><div><strong>${sessionGrades.free}</strong><small>Frei richtig</small></div><div><strong>${sessionGrades.mc}</strong><small>Mit Auswahl</small></div><div><strong>${sessionGrades.unknown}</strong><small>Noch üben</small></div></div><p class="footnote">${total} Antworten inklusive Wiederholungsversuchen. Die Wiederholungstermine bleiben gespeichert.</p>${more?'<button class="primary" id="continueBtn">Weiterlernen →</button>':canBonus?'<button class="primary" id="bonusFinishBtn">Bonusrunde starten · +20 Wörter →</button>':'<div class="done-note">Für dieses Deck sind aktuell keine weiteren Karten fällig. ¡Hasta pronto!</div>'}<button class="secondary" id="finishBtn">Zur Übersicht</button></div>`;$('finishBtn').onclick=()=>navigate('home');if(more)$('continueBtn').onclick=startSession;if(canBonus&&!more)$('bonusFinishBtn').onclick=grantBonus;return}
+function renderStudy(){const area=$('studyArea');$('sessionProgress').textContent=`${sessionCompleted} geschafft · ${queue.length+(current?1:0)} offen`;$('progressFill').style.width=`${Math.min(100,100*sessionCompleted/Math.max(1,sessionTotal))}%`;if(!current){const avail=sessionCollectionId?collectionDueCards(getCollection(sessionCollectionId),selectedDirection):candidates(selectedDirection);const more=avail.length>0;const canBonus=!sessionCollectionId&&!isReviewOnly()&&selectedDirection==='passive'&&remainingFresh()>0&&introducedToday()>=dailyAllowance()&&data.words.some(w=>deckFilter(w)&&inCategory(w)&&!w.progress.passive.introducedOn&&freshFilter(w));const todayDone=introducedToday()>=20;const total=sessionGrades.free+sessionGrades.mc+sessionGrades.unknown;const percent=total?Math.round(100*sessionGrades.free/total):0;area.innerHTML=`<div class="empty finish"><div class="big-emoji">🎉</div><h2>${sessionCollectionId?'Sammlungsrunde geschafft!':todayDone?'Tagesziel geschafft!':'¡Muy bien! Runde geschafft!'}</h2><p>${sessionCollectionId?'Deine fälligen Sammlungswörter wurden im normalen SRS bewertet.':todayDone?'Dein empfohlenes Tagespaket ist erledigt. Du kannst stolz auf dich sein!':'Stark gemacht! Jeder freie Abruf bringt dich weiter.'}</p><div class="session-stats"><div><strong>${sessionUnique.size}</strong><small>Verschiedene Wörter</small></div><div><strong>${sessionNew}</strong><small>Neue Wörter</small></div><div><strong>${percent} %</strong><small>Frei gewusst</small></div><div><strong>${sessionGrades.free}</strong><small>Frei richtig</small></div><div><strong>${sessionGrades.mc}</strong><small>Mit Auswahl</small></div><div><strong>${sessionGrades.unknown}</strong><small>Noch üben</small></div></div><p class="footnote">${total} Antworten inklusive Wiederholungsversuchen. Die Wiederholungstermine bleiben gespeichert.</p>${more?'<button class="primary" id="continueBtn">Weiterlernen →</button>':canBonus?'<button class="primary" id="bonusFinishBtn">Bonusrunde starten · +20 Wörter →</button>':sessionCollectionId?'<div class="done-note">In dieser Sammlung sind derzeit keine weiteren Karten fällig.</div>':'<div class="done-note">Für dieses Deck sind aktuell keine weiteren Karten fällig. ¡Hasta pronto!</div>'}<button class="secondary" id="finishBtn">${sessionCollectionId?'Zur Sammlung':'Zur Übersicht'}</button></div>`;$('finishBtn').onclick=()=>{if(sessionCollectionId){wordsSubview='collections';selectedCollectionId=sessionCollectionId;navigate('words')}else navigate('home')};if(more)$('continueBtn').onclick=()=>sessionCollectionId?startCollectionReview(sessionCollectionId,selectedDirection):startSession();if(canBonus&&!more)$('bonusFinishBtn').onclick=grantBonus;return}
 const w=wordFor(current);let html=cardTop(w);
 if(phase==='question'){const mcAvailable=optionPool(w,current.dir).length>=3;html+=`<p class="prompt">Überlege dir die Übersetzung. Du musst nichts eintippen.</p><div class="actions"><button class="primary" id="knowBtn">Weiß ich → Lösung zeigen</button><button class="secondary" id="mcBtn" ${mcAvailable?'':'disabled title="Nicht genügend Antworten derselben Wortart"'}>Multiple Choice</button><button class="ghost" id="unknownBtn">Weiß nicht → Lösung</button></div>${mcAvailable?'':'<p class="prompt">Für diese Wortart gibt es noch nicht genügend unterschiedliche MC-Antworten.</p>'}` }
 if(phase==='reveal'){html+=`<div class="answer-box"><div class="label">DIE LÖSUNG</div><strong>${escape(current.dir==='passive'?w.de:w.es)}</strong><em>${escape(w.example)}</em></div><p class="prompt">Hattest du die Übersetzung wirklich richtig im Kopf?</p><div class="actions"><button class="primary" id="yesBtn">Ja, frei gewusst ✓</button><button class="secondary" id="noBtn">Nein, nicht gewusst</button></div>`}
@@ -173,26 +211,176 @@ function renderWordStats(){
 }
 function renderWords(){
  renderWordStats();
+ const note=$('devWordsNotice');if(note)note.hidden=!devMode;
  const q=$('wordSearch').value.trim().toLocaleLowerCase(),status=$('wordStatus').value,level=$('wordLevel').value;
- const filtered=data.words.filter(w=>isDiscovered(w)&&`${w.es} ${w.de} ${w.category} ${w.part_of_speech||''}`.toLocaleLowerCase().includes(q)&&
+ const filtered=data.words.filter(w=>(devMode||isDiscovered(w))&&`${w.es} ${w.de} ${w.category} ${w.part_of_speech||''}`.toLocaleLowerCase().includes(q)&&
  (status==='all'||status==='due'&&isDue(w)||status==='unlocked'&&eligibleForActive(w)||status==='mastered'&&mastered(w)||status==='building'&&!mastered(w))&&
  (level==='all'||masteryBucket(w,statsDirection)===level));
  const groups=new Map();for(const w of filtered){const key=w.category||'Alltag';if(!groups.has(key))groups.set(key,[]);groups.get(key).push(w)}
  const sorted=[...groups].sort(([a],[b])=>a.localeCompare(b,'de'));
- $('wordList').innerHTML=sorted.map(([cat,words])=>`<details class="word-group" ${q?'open':''}><summary><span>${escape(cat)}</span><span class="group-count">${words.length} Wörter <span aria-hidden="true">⌄</span></span></summary><div class="group-words">${words.map(w=>`<div class="word-row"><b>${escape(w.es)}</b><span>${escape(w.de)}</span><small>${mastered(w)?'Gemeistert':eligibleForActive(w)?'Aktiv freigeschaltet':'Im Aufbau'} · Basis ${escape((w.deck_id||'').slice(-1))} / Paket ${escape(w.package_in_deck)} · ${escape(WORD_CLASSES[w.part_of_speech]||'Wort')}</small></div>`).join('')}</div></details>`).join('')||`<div class="empty-words"><div>📖</div><h2>${data.words.some(isDiscovered)?'Keine passenden Wörter':'Deine Sammlung wartet auf dich!'}</h2><p>${data.words.some(isDiscovered)?'Versuche einen anderen Suchbegriff oder Filter.':'Starte Basis 1, Paket 1. Jedes Wort erscheint hier, sobald du seine Lernkarte gesehen hast.'}</p></div>`;
+ $('wordList').innerHTML=sorted.map(([cat,words])=>`<details class="word-group" ${q?'open':''}><summary><span>${escape(cat)}</span><span class="group-count">${words.length} Wörter <span aria-hidden="true">⌄</span></span></summary><div class="group-words">${words.map(w=>`<div class="word-row"><div class="word-row-top"><b>${escape(w.es)}</b>${(devMode||isDiscovered(w))?`<button type="button" class="word-add-button" data-add-word="${escape(w.id)}" aria-label="${escape(w.es)} zu Sammlung hinzufügen" title="Zu Sammlung hinzufügen">＋</button>`:''}</div><span>${escape(w.de)}</span><small>${mastered(w)?'Gemeistert':eligibleForActive(w)?'Aktiv freigeschaltet':'Im Aufbau'} · Basis ${escape((w.deck_id||'').slice(-1))} / Paket ${escape(w.package_in_deck)} · ${escape(WORD_CLASSES[w.part_of_speech]||'Wort')}</small></div>`).join('')}</div></details>`).join('')||`<div class="empty-words"><div>📖</div><h2>${data.words.some(isDiscovered)?'Keine passenden Wörter':'Deine Sammlung wartet auf dich!'}</h2><p>${data.words.some(isDiscovered)?'Versuche einen anderen Suchbegriff oder Filter.':'Starte Basis 1, Paket 1. Jedes Wort erscheint hier, sobald du seine Lernkarte gesehen hast.'}</p></div>`;
+ renderWordsSubview();
 }
 
-function navigate(name){document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===name));document.querySelectorAll('.nav').forEach(x=>x.classList.toggle('active',x.dataset.page===name));if(name==='home')updateHome();if(name==='words')renderWords();if(name==='learn'&&!current&&queue.length===0)renderStudy();window.scrollTo(0,0)}
-document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>b.dataset.page==='learn'?(current?navigate('learn'):startSession()):navigate(b.dataset.page));$('startBtn').onclick=startSession;
+// 0.5c: personal collections of already-discovered canonical words (shared SRS).
+function getCollection(id){return (data.collections||[]).find(c=>c.id===id)||null}
+function collectionWords(c){const ids=new Set(c?.wordIds||[]);return data.words.filter(w=>ids.has(w.id)&&(devMode||isDiscovered(w)))}
+function collectionDueCards(c,dir='passive'){
+ if(!c)return[];
+ return collectionWords(c).filter(w=>{
+  const p=w.progress[dir];
+  return (dir==='passive'||eligibleForActive(w))&&!!p.due&&p.due<=iso()&&
+   (dir==='passive'?!!w.progress.passive.introducedOn:true);
+ }).sort((a,b)=>a.progress[dir].due.localeCompare(b.progress[dir].due)).map(w=>({id:w.id,dir,due:w.progress[dir].due}));
+}
+function startCollectionReview(id,dir){
+ const c=getCollection(id);if(!c)return;
+ const cards=collectionDueCards(c,dir);
+ if(!cards.length){renderCollections();return;}
+ selectedDirection=dir;startSession(cards,id);
+}
+function createCollection(){
+ const name=prompt('Wie soll deine Sammlung heißen? (max. 64 Zeichen)');
+ if(name===null)return;
+ const cleaned=name.trim().replace(/\s+/g,' ').slice(0,64);
+ if(!cleaned){alert('Bitte gib einen Sammlungsnamen ein.');return;}
+ if(data.collections.length>=100){alert('Maximal 100 Sammlungen möglich.');return;}
+ const id='col-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8);
+ data.collections.push({id,name:cleaned,wordIds:[],createdAt:iso()});
+ selectedCollectionId=id;collectionQuery='';pickerWordId=null;save();renderWords();
+}
+function renameCollection(id){
+ const c=getCollection(id);if(!c)return;
+ const name=prompt('Neuer Name für die Sammlung:',c.name);
+ if(name===null)return;
+ const cleaned=name.trim().replace(/\s+/g,' ').slice(0,64);
+ if(!cleaned){alert('Bitte gib einen Namen ein.');return;}
+ c.name=cleaned;save();renderCollections();
+}
+function deleteCollection(id){
+ const c=getCollection(id);if(!c)return;
+ if(!confirm('Sammlung „'+c.name+'“ löschen? Deine Wörter und SRS-Fortschritte bleiben erhalten.'))return;
+ data.collections=data.collections.filter(x=>x.id!==id);
+ if(selectedCollectionId===id)selectedCollectionId=null;
+ save();renderWords();
+}
+function setCollectionMember(id,wordId,shouldAdd){
+ const c=getCollection(id),w=data.words.find(w=>w.id===wordId);
+ if(!c||!w||(!devMode&&!isDiscovered(w)))return;
+ if(shouldAdd&&!c.wordIds.includes(wordId))c.wordIds.push(wordId);
+ if(!shouldAdd)c.wordIds=c.wordIds.filter(x=>x!==wordId);
+ save();renderCollections();
+}
+function renderWordsSubview(){
+ const all=$('allWordsTab'),coll=$('collectionsTab');
+ all.hidden=wordsSubview!=='all';coll.hidden=wordsSubview!=='collections';
+ $('wordsAllTabButton').setAttribute('aria-selected',String(wordsSubview==='all'));
+ $('wordsCollectionsTabButton').setAttribute('aria-selected',String(wordsSubview==='collections'));
+ $('wordsAllTabButton').classList.toggle('selected',wordsSubview==='all');
+ $('wordsCollectionsTabButton').classList.toggle('selected',wordsSubview==='collections');
+ if(wordsSubview==='collections')renderCollections();
+}
+function renderCollections(){
+ const area=$('collectionsArea');if(!area)return;
+ const c=getCollection(selectedCollectionId);
+ if(selectedCollectionId&&!c)selectedCollectionId=null;
+ const collectionCount=data.collections.length;
+ if(!c){
+  area.innerHTML=`<div class="collections-intro"><div><strong>Deine eigenen Wortlisten</strong><p class="muted">Ordne Wörter nach deinen Themen. Im normalen Modus stehen dir bereits entdeckte Wörter zur Verfügung. Jedes Wort behält seinen Lernstand.</p></div><button class="primary collection-create" data-col-action="create">＋ Neue Sammlung</button></div>`+
+  (collectionCount?`<div class="collection-list">${data.collections.map(col=>{
+    const count=collectionWords(col).length;
+    const due=collectionDueCards(col).length;
+    return `<button type="button" class="collection-tile" data-col-action="open" data-col-id="${escape(col.id)}"><span class="collection-tile-icon">▤</span><span class="collection-tile-info"><strong>${escape(col.name)}</strong><small>${count} ${count===1?'Wort':'Wörter'} · ${due} passiv fällig</small></span><span class="collection-tile-arrow">›</span></button>`;
+   }).join('')}</div>`:`<div class="collection-empty"><div>📂</div><h3>Platz für deine Lieblingswörter</h3><p>Erstelle deine erste Sammlung. Anschließend kannst du bereits entdeckte Wörter hinzufügen – aus deinem Wortschatz oder direkt hier.</p></div>`);
+ }else{
+  const words=collectionWords(c), ids=new Set(c.wordIds);
+  const passive=collectionDueCards(c,'passive').length,active=collectionDueCards(c,'active').length;
+  const q=collectionQuery.toLocaleLowerCase('de');
+  const matches=data.words.filter(w=>(devMode||isDiscovered(w))&&!ids.has(w.id)&&`${w.es} ${w.de} ${w.category}`.toLocaleLowerCase('de').includes(q)).slice(0,35);
+  area.innerHTML=`<button class="text-btn collection-back" data-col-action="back">← Alle Sammlungen</button>
+    <div class="panel collection-detail"><div class="collection-detail-heading"><div><div class="eyebrow">MEINE SAMMLUNG</div><h2>${escape(c.name)}</h2><p class="muted">${words.length} ${words.length===1?'Wort':'Wörter'} · ${passive} passiv fällig · ${active} aktiv fällig</p></div><button class="collection-icon-action" data-col-action="rename" aria-label="Sammlung umbenennen" title="Umbenennen">✎</button></div>
+    <div class="collection-review-actions"><button class="primary" data-col-action="review-passive" ${passive?'':'disabled'}>Passiv wiederholen (${passive})</button><button class="secondary" data-col-action="review-active" ${active?'':'disabled'}>Aktiv wiederholen (${active})</button></div>
+    <p class="footnote">Hier übst du nur fällige Karten. Die Bewertungen fließen in denselben SRS-Fortschritt wie beim normalen Lernen.</p>
+    <div class="collection-word-list">${words.length?words.map(w=>`<div class="collection-word-row"><div><strong>${escape(w.es)}</strong><span>${escape(w.de)}</span></div><button class="collection-icon-action" data-col-action="remove" data-word-id="${escape(w.id)}" aria-label="${escape(w.es)} entfernen" title="Aus Sammlung entfernen">×</button></div>`).join(''):'<p class="muted">Noch keine Wörter in dieser Sammlung.</p>'}</div>
+    <div class="collection-add-section"><h3>Wörter hinzufügen</h3><p class="muted">${devMode?'🧪 Entwicklermodus: Du kannst hier auch noch ungesehene Wörter testweise zuordnen. Sie werden ohne SRS-Änderung gespeichert.':'Zur Auswahl stehen nur Wörter, die du bereits entdeckt hast.'}</p><input type="search" id="collectionSearch" placeholder="Spanisches oder deutsches Wort suchen …" value="${escape(collectionQuery)}" aria-label="Entdeckte Wörter für Sammlung suchen"><div id="collectionSearchResults" class="collection-search-results">${matches.map(w=>`<button class="collection-search-row" data-col-action="add" data-word-id="${escape(w.id)}"><span><strong>${escape(w.es)}</strong><small>${escape(w.de)}</small></span><b>＋</b></button>`).join('')||'<p class="muted">Keine weiteren passenden entdeckten Wörter.</p>'}</div></div>
+    <button class="ghost collection-delete" data-col-action="delete">Sammlung löschen</button></div>`;
+  const search=$('collectionSearch');if(search){search.oninput=e=>{
+    collectionQuery=e.target.value;
+    const query=collectionQuery.toLocaleLowerCase('de');
+    const items=data.words.filter(w=>(devMode||isDiscovered(w))&&!ids.has(w.id)&&`${w.es} ${w.de} ${w.category}`.toLocaleLowerCase('de').includes(query)).slice(0,35);
+    $('collectionSearchResults').innerHTML=items.map(w=>`<button class="collection-search-row" data-col-action="add" data-word-id="${escape(w.id)}"><span><strong>${escape(w.es)}</strong><small>${escape(w.de)}</small></span><b>＋</b></button>`).join('')||'<p class="muted">Keine weiteren passenden entdeckten Wörter.</p>';
+   }}
+ }
+ if(pickerWordId)renderCollectionPicker();
+}
+function openCollectionPicker(wordId){
+ if(!data.words.some(w=>w.id===wordId&&(devMode||isDiscovered(w))))return;
+ pickerWordId=wordId;renderCollectionPicker();
+}
+function renderCollectionPicker(){
+ const overlay=$('collectionPicker');if(!overlay)return;
+ const w=data.words.find(w=>w.id===pickerWordId);
+ if(!w){overlay.hidden=true;pickerWordId=null;return;}
+ overlay.hidden=false;
+ overlay.innerHTML=`<div class="collection-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="pickerTitle"><div class="picker-heading"><div><div class="eyebrow">WORT ZUORDNEN</div><h2 id="pickerTitle">${escape(w.es)}</h2><p class="muted">${escape(w.de)}</p></div><button class="collection-icon-action" data-picker-close aria-label="Schließen">×</button></div><div class="picker-list">${data.collections.map(c=>`<button class="picker-choice ${c.wordIds.includes(w.id)?'in-collection':''}" data-picker-collection="${escape(c.id)}"><span>${escape(c.name)}</span><strong>${c.wordIds.includes(w.id)?'✓ Hinzugefügt':'＋ Hinzufügen'}</strong></button>`).join('')||'<p class="muted">Du hast noch keine Sammlung. Lege zuerst eine an.</p>'}</div><button class="secondary" data-picker-create>＋ Neue Sammlung anlegen</button></div>`;
+ const close=()=>{pickerWordId=null;overlay.hidden=true;overlay.innerHTML='';};
+ overlay.onclick=e=>{
+  if(e.target===overlay||e.target.closest('[data-picker-close]')){close();return;}
+  if(e.target.closest('[data-picker-create]')){const idBefore=pickerWordId;close();wordsSubview='collections';createCollection();if(selectedCollectionId)setCollectionMember(selectedCollectionId,idBefore,true);return;}
+  const btn=e.target.closest('[data-picker-collection]');if(!btn)return;
+  const c=getCollection(btn.dataset.pickerCollection);if(!c)return;
+  setCollectionMember(c.id,w.id,!c.wordIds.includes(w.id));
+  // Keep the picker open to allow one word in multiple collections.
+  renderCollectionPicker();
+ };
+}
+$('wordsAllTabButton').onclick=()=>{wordsSubview='all';pickerWordId=null;$('collectionPicker').hidden=true;renderWordsSubview()};
+$('wordsCollectionsTabButton').onclick=()=>{wordsSubview='collections';pickerWordId=null;$('collectionPicker').hidden=true;renderWordsSubview()};
+$('wordList').addEventListener('click',e=>{const add=e.target.closest('[data-add-word]');if(add)openCollectionPicker(add.dataset.addWord)});
+$('collectionsArea').addEventListener('click',e=>{
+ const btn=e.target.closest('[data-col-action]');if(!btn)return;
+ const action=btn.dataset.colAction,id=btn.dataset.colId||selectedCollectionId;
+ if(action==='create')createCollection();
+ if(action==='open'){selectedCollectionId=id;collectionQuery='';renderCollections();}
+ if(action==='back'){selectedCollectionId=null;collectionQuery='';renderCollections();}
+ if(action==='rename')renameCollection(id);
+ if(action==='delete')deleteCollection(id);
+ if(action==='remove')setCollectionMember(id,btn.dataset.wordId,false);
+ if(action==='add')setCollectionMember(id,btn.dataset.wordId,true);
+ if(action==='review-passive')startCollectionReview(id,'passive');
+ if(action==='review-active')startCollectionReview(id,'active');
+});
+function renderDevPreview(){
+ const wrap=$('devPreview');if(!wrap)return;
+ wrap.hidden=!devMode;
+ const select=$('devPackageSelect');
+ if(!devMode)return;
+ if(!select.options.length){
+  const packages=[...new Map(data.words.map(w=>[w.package, w])).values()].sort((a,b)=>a.package-b.package);
+  select.innerHTML=packages.map(w=>`<option value="${escape(w.package)}">Basis ${escape((w.deck_id||'').slice(-1))} · Paket ${escape(w.package_in_deck)} · ${escape(w.learning_goal||'')}</option>`).join('');
+ }
+ const n=Number(select.value),words=data.words.filter(w=>w.package===n);
+ $('devPreviewList').innerHTML=words.map((w,i)=>`<div class="dev-word"><span class="dev-word-num">${i+1}</span><div><strong>${escape(w.es)}</strong><span>${escape(w.de)}</span></div></div>`).join('');
+ $('devPreviewCount').textContent=`${words.length} Karten · nur Vorschau, kein SRS`;
+}
+function renderDevControls(){
+ const checkbox=$('devModeToggle');if(!checkbox)return;
+ checkbox.checked=devMode;
+ $('devModeStatus').textContent=devMode?'Entwicklermodus aktiv: alle Dialoge und Wörter sind sichtbar.':'Entwicklermodus aus: normale Freischaltregeln gelten.';
+ renderDevPreview();
+}
+function navigate(name){if(name==='dialogues')PalabraDialogues.render(data,save,navigate);if(name==='stories')PalabraStories.render(data,save,navigate);document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===name));document.querySelectorAll('.nav').forEach(x=>x.classList.toggle('active',x.dataset.page===name));if(name==='home'){updateHome();PalabraDialogues.renderHome(data,navigate)}if(name==='words')renderWords();if(name==='settings')renderDevControls();if(name==='learn'&&!current&&queue.length===0)renderStudy();window.scrollTo(0,0)}
+document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>b.dataset.page==='learn'?(current?navigate('learn'):startSession()):navigate(b.dataset.page));$('startBtn').onclick=startSession;$('openDialogues').onclick=()=>navigate('dialogues');$('openStories').onclick=()=>navigate('stories');
+$('devModeToggle').onchange=e=>{devMode=e.target.checked;try{localStorage.setItem(DEV_KEY,String(devMode))}catch(_){}renderDevControls();PalabraDialogues.renderHome(data,navigate);};$('devPackageSelect').onchange=renderDevPreview;
 $('passiveMode').onclick=()=>{selectedDirection='passive';updateHome()};$('activeMode').onclick=()=>{selectedDirection='active';updateHome()};$('categorySelect').onchange=e=>{selectedCategory=e.target.value;updateHome()};
 
 $('packageSelect').onchange=e=>{selectedPackage=e.target.value;selectedCategory='all';data.settings.lastPackage=selectedPackage;save();updateHome()};
 function grantBonus(){if(!remainingFresh())return;const previous=extraBlocksToday();data.settings.extraDate=iso();data.settings.extraBlocks=previous+1;if(!save())return;updateHome();startSession()}$('extraBlockBtn').onclick=grantBonus;$('exitLearn').onclick=()=>navigate('home');$('wordSearch').oninput=renderWords;$('wordStatus').onchange=renderWords;$('wordLevel').onchange=renderWords;$('statsPassive').onclick=()=>{statsDirection='passive';renderWords()};$('statsActive').onclick=()=>{statsDirection='active';renderWords()};
 function download(content,name,type){const blob=new Blob([content],{type});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000)}
 $('exportBtn').onclick=()=>{download(JSON.stringify({...data,exportedAt:new Date().toISOString()},null,2),`Palabra-Backup-${iso()}.json`,'application/json');$('backupMessage').textContent='Backup erstellt. Bitte in „Dateien“ sicher aufbewahren.'};
-$('importBackup').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;const el=$('backupMessage');try{const parsed=validate(JSON.parse(await f.text()));if(!confirm(`Backup mit ${parsed.words.length} Wörtern laden? Dein aktueller lokaler Lernstand wird dadurch ersetzt.`))return;data=parsed;if(data.settings.dailyNew===10)data.settings.dailyNew=20;if(!Number.isFinite(data.settings.extraBlocks))data.settings.extraBlocks=0;reconcileUnlocks();save();el.className='notice';el.textContent='Backup erfolgreich wiederhergestellt.';updateHome()}catch(err){el.className='notice error';el.textContent='Import fehlgeschlagen: '+err.message}finally{e.target.value=''}};
+$('importBackup').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;const el=$('backupMessage');try{const parsed=validate(JSON.parse(await f.text()));if(!confirm(`Backup mit ${parsed.words.length} Wörtern laden? Dein aktueller lokaler Lernstand wird dadurch ersetzt.`))return;data=parsed;normalizeCollections();selectedCollectionId=null;collectionQuery='';pickerWordId=null;if(data.settings.dailyNew===10)data.settings.dailyNew=20;syncCuratedDecks();if(!Number.isFinite(data.settings.extraBlocks))data.settings.extraBlocks=0;reconcileUnlocks();normalizeCollections();save();el.className='notice';el.textContent='Backup erfolgreich wiederhergestellt.';updateHome()}catch(err){el.className='notice error';el.textContent='Import fehlgeschlagen: '+err.message}finally{e.target.value=''}};
 function parseCSV(text){const out=[];let row=[],cell='',quoted=false;for(let i=0;i<text.length;i++){const c=text[i];if(c==='"'){if(quoted&&text[i+1]==='"'){cell+='"';i++}else quoted=!quoted}else if(c===','&&!quoted){row.push(cell);cell=''}else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&text[i+1]==='\n')i++;row.push(cell);if(row.some(x=>x.trim()))out.push(row);row=[];cell=''}else cell+=c}row.push(cell);if(row.some(x=>x.trim()))out.push(row);return out}
 $('importCsv').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;const el=$('csvMessage');try{const rows=parseCSV((await f.text()).replace(/^\uFEFF/,''));const headers=rows.shift().map(s=>s.trim().toLowerCase());const find=(...keys)=>headers.findIndex(x=>keys.includes(x));const es=find('spanisch','es'),de=find('deutsch','de'),ex=find('beispiel_es','beispiel'),cat=find('kategorie','category');if(es<0||de<0)throw Error('Spalten „Spanisch“ und „Deutsch“ fehlen.');let added=0;const existing=new Set(data.words.map(w=>w.es.trim().toLocaleLowerCase()));for(const r of rows){const spanish=(r[es]||'').trim(),german=(r[de]||'').trim();if(!spanish||!german||existing.has(spanish.toLocaleLowerCase()))continue;data.words.push({id:'w-'+Date.now().toString(36)+'-'+added,es:spanish,de:german,example:ex>=0?(r[ex]||'').trim():'',category:cat>=0?(r[cat]||'Alltag').trim():'Alltag',progress:newProgress()});existing.add(spanish.toLocaleLowerCase());added++}save();el.className='notice';el.textContent=`${added} neue Wörter importiert.`;updateHome()}catch(err){el.className='notice error';el.textContent='CSV-Import fehlgeschlagen: '+err.message}finally{e.target.value=''}};
 function refreshClock(){ $('todayDate').textContent=new Intl.DateTimeFormat('de-DE',{day:'numeric',month:'short'}).format(new Date());if(document.getElementById('home').classList.contains('active'))updateHome()}
-refreshClock();document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshClock()});window.addEventListener('focus',refreshClock);
+PalabraDialogues.renderHome(data,navigate);refreshClock();document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshClock()});window.addEventListener('focus',refreshClock);
 })();
