@@ -1,0 +1,8 @@
+Palabra 0.5a.3 – Interface Refinement
+
+Alle Dateien gemeinsam in einen Ordner entpacken. index.html öffnen.
+Für iPhone-Tests auf GitHub Pages unter einem separaten Testpfad bereitstellen.
+Achtung: Daten werden weiterhin lokal gespeichert, ohne Cloud-Sync.
+Die App verwendet denselben lokalen Speicherschlüssel wie 0.5a.2; vor dem Test gegebenenfalls Backup exportieren.
+
+Neu: Start mit Basis 1, nur Wiederholungs-Kategorienfilter, Wörter erst nach Entdeckung, Kategorien und Meisterungsstatistiken, Safe-Area und Header-Dekoration.
