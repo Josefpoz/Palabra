@@ -250,3 +250,126 @@ body{padding-top:max(25px,env(safe-area-inset-top,0px))}
 .story-panel-fullsentence .story-gloss-list>span{background:#2d4857;border-color:#466477;color:#dfedef}
 .story-panel-fullsentence .story-gloss-list b{color:#9ce0bc}
 @media(max-width:430px){.story-paragraph{line-height:2.04}.story-level-choice{padding:8px 14px}}
+
+/* 0.6a.4: Grammatik-Entdeckungen statt automatischer Satzgliedraten. */
+.story-focus-explain[hidden], .story-focus-legend[hidden]{display:none!important}
+.story-focus-explain{margin:8px 0 13px;padding:12px 14px;border-radius:11px;background:#fff8db;border:1px solid #e8cf76;color:#394b40;font-family:system-ui,sans-serif;line-height:1.55}
+.story-focus-heading{font-weight:800;font-size:13px;color:#6b4d08;margin-bottom:5px}
+.story-focus-explain p{font-size:12.5px;line-height:1.65;margin:4px 0 9px;color:#3f5147}
+.story-focus-keys{display:flex;flex-wrap:wrap;gap:6px}
+.story-focus-key{display:inline-flex;border:1px solid rgba(32,52,64,.13);border-radius:6px;padding:3px 7px;font-size:11px;font-weight:650;background:#eef3ef;color:#31453f}
+.story-focus-key[data-focus-kind="verb"]{background:#cadefa;color:#255c97}
+.story-focus-key[data-focus-kind="subject"]{background:#e2d2f7;color:#563583}
+.story-focus-key[data-focus-kind="clause"]{background:#d1e9e5;color:#1b666c}
+.story-focus-key[data-focus-kind="reference"]{background:#ffdfb6;color:#785113}
+.story-focus-key[data-focus-kind="detail"]{background:#eee4c7;color:#655328}
+.story-focus-key[data-focus-kind="link"]{background:#dee1e8;color:#515b6c}
+.story-grammar-on .story-token[data-focus-kind="verb"]{background:#cadefa!important;box-shadow:inset 0 -2px #255c97!important;border-radius:4px}
+.story-grammar-on .story-token[data-focus-kind="subject"]{background:#e2d2f7!important;box-shadow:inset 0 -2px #563583!important;border-radius:4px}
+.story-grammar-on .story-token[data-focus-kind="clause"]{background:#d1e9e5!important;box-shadow:inset 0 -2px #1b666c!important;border-radius:4px}
+.story-grammar-on .story-token[data-focus-kind="reference"]{background:#ffdfb6!important;box-shadow:inset 0 -2px #785113!important;border-radius:4px}
+.story-grammar-on .story-token[data-focus-kind="detail"]{background:#eee4c7!important;box-shadow:inset 0 -2px #655328!important;border-radius:4px}
+.story-grammar-on .story-token[data-focus-kind="link"]{background:#dee1e8!important;box-shadow:inset 0 -2px #515b6c!important;border-radius:4px}
+.story-focus-legend>p{margin:8px 0 0}
+
+
+/* 0.6a.5 – Buchsatz: ruhige, fortlaufende Absätze und hochgestellte Fußnoten. */
+.story-prose {
+  text-align: justify;
+  text-align-last: left;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  word-break: normal;
+  overflow-wrap: break-word;
+  line-height: 1.91;
+  letter-spacing: 0;
+  font-kerning: normal;
+  font-feature-settings: "kern" 1;
+}
+.story-paragraph {
+  text-align: justify;
+  text-align-last: left;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  margin: 0 0 1.04em;
+  line-height: inherit;
+}
+.story-paragraph .story-sentence-wrap::after {
+  content: ' ';
+  white-space: pre;
+}
+.story-paragraph .story-token {
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+.story-sentence-actions {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0;
+  margin: 0 0 0 1px;
+  white-space: nowrap;
+  vertical-align: super;
+  font-family: Georgia, 'Times New Roman', serif;
+  line-height: 1;
+}
+.story-translate-tiny, .story-grammar-tiny {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  min-height: 18px;
+  padding: 0 1px;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: #71847b;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: none;
+  filter: none;
+  opacity: .80;
+  transition: color .12s ease, background .12s ease, opacity .12s ease;
+}
+.story-grammar-tiny {color:#a17824;font-size:11px;}
+.story-translate-tiny:hover, .story-grammar-tiny:hover,
+.story-translate-tiny:focus-visible, .story-grammar-tiny:focus-visible {
+  opacity: 1;
+  background: rgba(36,113,95,.11);
+  color: #246d55;
+  outline: 2px solid #73b79e;
+  outline-offset: 2px;
+}
+.story-grammar-tiny.active {
+  background: rgba(213,164,57,.15);
+  color: #926511;
+  border: 0;
+  box-shadow: none;
+}
+.story-translate-tiny[aria-pressed="true"] {color:#23775c;opacity:1}
+.story-paragraph .story-translation,
+.story-paragraph .story-focus-explain {
+  display: block;
+  text-align: left;
+  hyphens: none;
+  font-family: system-ui, sans-serif;
+  letter-spacing: normal;
+  text-indent: 0;
+  font-kerning: auto;
+}
+.story-paragraph .story-translation {margin: 8px 0 12px}
+.story-focus-explain {background: #f7efcf;border-color:#e5d7a6;}
+.story-mode-advice {letter-spacing: .01em;}
+@media(max-width:430px) {
+  .story-prose {font-size: 18px;line-height: 1.91;}
+  .story-paragraph {line-height: inherit;}
+  .story-sentence-actions {margin-left: 1px;}
+  .story-translate-tiny, .story-grammar-tiny {min-width: 17px;min-height: 19px;}
+}
+
+/* Letztes Wort + Satzzeichen + Fußnoten als untrennbare Einheit. */
+.story-sentence-tail {white-space:nowrap; display:inline;}

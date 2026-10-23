@@ -1,0 +1,26 @@
+PALABRA 0.6a.5 – BUCHANSICHT (GitHub-Pages-Update)
+
+WAS IST NEU?
+- Blocksatz im Story-Lesemodus mit spanischer Sprachkennzeichnung für Umbruch/Silbentrennung.
+- Fußnotenartige, dezente Symbole direkt am Satzende:
+  ¹ = natürliche deutsche Übersetzung, ✦ = ausgewählte Grammatik-Entdeckung.
+- Hinweiszeichen bleiben mit dem Satzende verbunden; sie rutschen nicht allein in eine neue Zeile.
+- Keine störende Grammatiklegende mehr oberhalb des Buchtextes.
+- Die vorhandenen Geschichten, 776 Satzübersetzungen, 81 Grammatikblicke, Wörterlisten, Sammlungen und SRS-Logik bleiben erhalten.
+- Alle Stories, Niveaus und Kapitel bleiben ohne Freischaltung offen.
+
+GITHUB-PAGES-AKTUALISIERUNG
+1. Zur Sicherheit in Palabra unter "Mehr" eine JSON-Sicherung herunterladen.
+2. Dieses ZIP vollständig entpacken.
+3. Den INHALT des entpackten Ordners ins Stammverzeichnis des GitHub-Repos
+   josefpoz/Palabra übernehmen und vorhandene Dateien ersetzen.
+   Besonders wichtig: index.html, style.css, stories.js, update.js und
+   das Verzeichnis stories/. Auch alle weiteren Dateien beibehalten.
+4. Commit erstellen; GitHub Pages aktualisiert sich danach entsprechend der
+   eingestellten Bereitstellung. Das ZIP selbst nicht einfach nur ins Repo hochladen.
+5. Nach der Veröffentlichung Seite neu laden; bei Bedarf in "Mehr" unter
+   "Updates" den Cache-Neuladen-Knopf nutzen.
+
+HINWEIS
+Der fertige ZIP-Inhalt ist für GitHub vorbereitet, aber nicht automatisch in
+GitHub hochgeladen. Lokale Browserdaten werden nicht von GitHub synchronisiert.

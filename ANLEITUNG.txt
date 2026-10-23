@@ -1,18 +1,41 @@
-PALABRA 0.6a.3 – STORIES-BIBLIOTHEK (TESTVERSION)
+PALABRA 0.6a.5 – BUCHSATZ + DEZENTE GRAMMATIK-ENTDECKUNGEN
 
 1. ZIP vollständig in einen neuen Ordner entpacken.
-2. index.html lokal in deinem Browser öffnen.
-3. Unter „Stories“ El gato que quiere viajar (A1/A2) oder La última función del Cine Luna (A2/B1) auswählen.
-4. Über die Niveau-Schalter frei wechseln; alle Kapitel sind direkt zugänglich.
-5. Wörter antippen für Übersetzung. 🌐 zeigt eine natürliche Satzübersetzung, wenn sie kuratiert ist, sonst eine entsprechend gekennzeichnete Wort-für-Wort-Lesehilfe.
-6. 💡 direkt daneben blendet Satzglieder für NUR diesen Satz ein. Mehrere Sätze dürfen parallel aktiv sein.
-7. Fragen sind freiwillig; Vokabel-SRS ist unabhängig.
+2. index.html lokal im Browser öffnen.
+3. In Stories frei zwischen Coco (A1/A2) und Cine Luna (A2/B1) wechseln.
+4. Alle Kapitel sind von Anfang an frei zugänglich, ohne Freischaltbedingungen.
+5. Ein spanisches Wort antippen: Wortklasse, Grundform, Bedeutung und (wo bekannt) grammatische Form.
+6. ¹ an JEDEM Satz: natürliche deutsche Übersetzung. Keine ungeprüfte Wort-für-Wort-Ersatzübersetzung mehr.
+7. ✦ nur an ausgewählten Sätzen: von Hand formulierter Lerntipp zu einer besonderen Konstruktion. Die relevanten Wörter werden farbig markiert. Der Rest bleibt zum ungestörten Lesen neutral.
+8. Verständnisfragen sind optional, keine SRS-Effekte.
 
-WICHTIG: Der Grammatikblick ist ein weitgehend automatisch annotierter REDAKTIONSPROTOTYP.
-Alle Tokens besitzen eine Rolle, die grammatische Korrektheit komplexer Satzstrukturen ist noch nicht vollständig geprüft. Siehe ARBEITSPROZESS_STUDIO.md.
+DIESER TEST GEHT BEWUSST NICHT MEHR DAVON AUS, DASS JEDE SPANISCHE WORTGRUPPE
+AUTOMATISCH EINER SATZFUNKTION ZUGEORDNET WERDEN MUSS.
+Die fehleranfälligen alten syntaktischen Auto-Zuordnungen sind entfernt.
 
-Vokabeln und Lernstände bleiben im bisherigen lokalen Browser-Speicher. Bitte dennoch das JSON-Backup in der alten Version vor dem Wechsel exportieren; bei file:// kann ein anderer Ordner in manchen Browsern einen anderen Speicherbereich bekommen.
+INHALT:
+- 2 Geschichten / 4 Niveauversionen / 12 Kapitel
+- 776 Satz-/Dialogeinheiten mit natürlicher deutscher Übersetzung
+- 81 ausgewählte, redaktionell formulierte Grammatik-Entdeckungen
+- 372 lexikalische Korrekturen gegenüber dem Auto-Entwurf (keine manuellen Änderungen am Basis-Vokabeldeck)
 
-Technische Storydaten: stories/catalog.json
-Lokale Dateiansicht: stories/catalog.js
-Reproduzierbarer Builder: story_tools/compile_library.py
+TECHNISCH:
+- stories/catalog.json = vollständige Storydaten
+- stories/catalog.js = dieselben Daten für offline file:// (kein fetch nötig)
+- story_tools/manual_de/ = redaktionelle deutsche Übersetzungen
+- story_tools/editorial_tools.py = Übersetzungsmerge & ausgewählte Grammatikbeispiele
+- story_tools/polish_lexicon_06a4.py = korrigierte Wortklassen, Grundformen, Bedeutungen
+- story_tools/test_06a4.py = Inhalts- und Browser-Regressionstest
+
+Die fünf bestehenden Basisdecks, Sammlungen, Vokabel-SRS und gespeicherte Kapitel-Fortschritte bleiben im Code erhalten. Trotzdem bitte vor dem Wechsel JSON-Backup erstellen; file://-Browser-Speicher kann je nach entpacktem Ordner getrennt sein.
+
+NEU 0.6a.5 – BUCHANSICHT:
+- Fortlaufende, im Blocksatz gesetzte spanische Absätze (Sprachkennzeichnung für Silbentrennung).
+- Kleine hochgestellte Fußnoten unmittelbar nach dem Satz: ¹ Satzübersetzung, ✦ Grammatik-Entdeckung.
+- Beim Tippen öffnet sich die Erklärung an genau diesem Satz.
+- Keine ständig sichtbaren Symbolkästchen mehr; keine große Grammatiklegende über dem Text.
+- Für GitHub Pages: sämtliche ZIP-Dateien direkt ins Stammverzeichnis des Repos
+  übernehmen (auch den Unterordner stories/); vorhandene Dateien ersetzen,
+  nicht die ZIP-Datei selbst hochladen. Datenbank/Kartenstände bleiben bestehen.
+- Nach einem GitHub-Pages-Update im Browser neu laden, bei älteren Caches
+  gegebenenfalls unter Einstellungen → Updates „Aktuelle Version neu laden“.

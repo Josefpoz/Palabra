@@ -1,57 +1,60 @@
-# Palabra Stories 0.6a.3 – Werkstattbericht
+# Palabra Stories – Erkenntnisse aus Version 0.6a.4
 
-## Umfang
+## Didaktische Neuausrichtung
 
-- Zwei Geschichten: **El gato que quiere viajar** (A1/A2) und **La última función del Cine Luna** (A2/B1)
-- Zwei Niveaufassungen pro Geschichte, jeweils drei Kapitel: **12 Kapitel**
-- **4538** Wortvorkommen, **776** Satz-/Dialogeinheiten
-- **305** automatisch vorgeschlagene grammatische Beziehungen, darunter Subjekt–Verb-Kongruenz und reflexive Bezüge
-- **213** redaktionell übersetzte Sätze; übrige bieten eine als solche gekennzeichnete Wort-für-Wort-Lesehilfe
-- **24** optionale Leseverständnisfragen (zwei pro Kapitel)
-- Die ursprüngliche Kurzgeschichte *El libro sin nombre* ist aus dem Katalog entfernt
-- Keine Freischaltbedingungen: alle Kapitel und alle verfügbaren Niveaus direkt zugänglich
-- Basis-Vocabulary 1–5 (1.000 Karten), Mini-Dialoge (50), Sammlungen und SRS bleiben unverändert
+Grammatikblick bedeutet **kuratierte Entdeckung**, nicht komplette automatische Satzgliedklassifikation.
+Jeder Satz bekommt weiterhin Worterklärung und eine **natürliche deutsche Übersetzung**. Nur
+für tatsächlich lernrelevante Stellen bekommt er zusätzlich `grammarFocus`.
 
-## Automatisiert – funktioniert
+- A1: kurze Grundmuster, Verneinung, Fragen, Verbkonjugation und Subjekt/Verb.
+- A2: Vergangenheitsformen, feste Wendungen, Pronomen und Konjunktionen.
+- B1: referenzielle Pronomen, Subjuntivo, komplexe Nebensätze, Zeitstufen,
+  Ellipsen und Redewendungen.
 
-1. Quelltexte getrennt von Palabra Main halten (`story_tools/texts/`).
-2. Absätze, Anführungszeichen, Uhrzeiten, Zahlen, Wörter und Wortpositionen erfassen.
-3. Wortformen mit einem lokalen Wörterbuch und bestehenden Vokabeln verbinden; **4538 von 4538 Token haben ein nicht-leeres deutsches Bedeutungsfeld**. Das ist eine formale Vollständigkeitsprüfung, *keine* Bestätigung, dass jede Übersetzung kontextuell richtig ist.
-4. Alle Lexikpositionen mit einem Satzbaustein erfassen, so dass Grammatikblick technisch lückenlos gerendert wird.
-5. Rollen und einige grammatische Bezüge *vorschlagen*; beim erneuten Build vollständig reproduzieren.
-6. `catalog.json` (Studio-Schnittstelle) und `catalog.js` (lokaler file://-Adapter) generieren.
+Die gelbe Glühbirne ist bewusst ein selteneres, inhaltlich lohnendes Angebot.
+Sie fehlt bei einfachen, ohne Hilfe gut lesbaren Sätzen.
 
-## Noch nicht zuverlässig automatisiert
+## Messwerte
 
-**Grammatikrichtigkeit:** Unser derzeitiges Script benutzt transparente lexikalische Heuristiken statt eines trainierten spanischen Syntaxparsers. Die 305 Beziehungen sind Vorschläge, keine abschließend geprüften Analysen. Besonders Nebensätze, unausgesprochene Subjekte, das unpersönliche/reflexive *se*, verkettete Verbformen und nicht benachbarte Satzteile brauchen Kontextkontrolle. Farbig vollständig bedeutet nur *technisch erfasst*, nicht *linguistisch sicher richtig*.
+- 12 Kapitel / vier Niveauversionen / zwei Geschichten.
+- 776 Satz- und Dialogeinheiten; **776 von 776 besitzen natürliche deutsche Übersetzungen**.
+- 81 manuell ausgewählte und beschriebene Lerntipps (10,4 % der Satzeinheiten).
+- 372 konservative Korrekturen der bisherigen automatischen Wortklassen/Grundformen/Glossen;
+  einige weitere Fehler im nicht vollständig redaktionell geprüften Wortlexikon sind möglich.
+- 0 automatisch zugeschriebene Subjekt/Prädikat/Objekt-Farbgruppen im publizierten Reader.
+- Keine Änderung an 1.000 Basisvokabeln, SRS, Sammlungen und Story-Lesefortschritt.
 
-**Übersetzung im Kontext:** Deutsche Einzelausdrücke sind vorhanden, aber eine isolierte Form kann mehrere Bedeutungen haben. Wörtliche Übersetzungen werden nur dann angezeigt, wenn sie separat kuratiert sind. Die natürlichen Satzübersetzungen wurden bewusst nicht durch eine ungeprüfte Wortaneinanderreihung ersetzt.
+## Aufwand und Automatisierungsstrategie
 
-**Autorentätigkeit:** Erst Quelltext prüfen, dann alle Worterklärungen und Syntaxrollen redaktionell korrigieren, Beziehungen gezielt setzen, idiomatische Übersetzungen ergänzen und anschließend Browser-/Layouttests durchführen.
+**Gut automatisierbar:** Text segmentieren, Tokens/IDs, häufige Lemmas, einfache Wortarten,
+Token-Abdeckung prüfen, Auswahlkandidaten für besondere Konstruktionen suchen,
+Versionen und Kapitel exportieren, Übersetzungs-Vollständigkeit prüfen.
 
-## Wichtigste Erkenntnis für Palabra Studio
+**Redaktionell sinnvoll:** natürliches Deutsch, mehrdeutige Wortbedeutungen,
+kontextbezogene Pronomenreferenzen, Auswahl der relevanten Lerntipps und klare
+pädagogische Erklärungen.
 
-Wir brauchen kein großes Sprachmodell *im Reader*. Für die Redaktion lohnt sich ein externes Studio mit:
+Es ist ausdrücklich kein Ziel mehr, 100 % aller Sätze syntaktisch vollständig
+zu zerteilen. Studio soll zuerst einen Editor für Übersetzungen und **optionale**
+Lerntipps bekommen. Bei A1 ist ein höherer Anteil der normalen Satzanalyse weiterhin
+gewollt, um Satzbaugrundlagen zu zeigen.
 
-1. **Analyse-Vorschlagsdienst:** Tokenizer, spanischer morphologischer Analysator, Dependency-Parser (optional; Autorität liegt bei Redaktion)
-2. **Satzglieder-Editor:** Blöcke per Drag-/Klick markieren, verschachtelte Nebensätze anzeigen, sämtliche Tokenpositionen auf Vollständigkeit prüfen
-3. **Beziehungs-Editor:** Pronomen–Bezugswort, Subjekt–Prädikat, syntaktische Referenzen, klare Vorschau gemeinsamer Hervorhebung
-4. **Übersetzungs-Editor und Translation Memory:** Bereits geprüfte Wörter, Wendungen und wiederkehrende Sätze automatisch vorschlagen
-5. **Qualitätssicherung:** Fehlende und zweifelhafte Analysen nach Priorität anzeigen und erst nach menschlicher Freigabe als *geprüft* markieren
-6. **Unverändertes Format:** JSON exportieren, von Main einfach lesen lassen; Fortschrittsdaten nie ins Storyformat schreiben
+## Reproduzierbare Erstellung
 
-## Satzrollenverteilung (technische Gruppierungen)
-- adjunct: 784
-- predicate: 741
-- subject: 415
-- direct: 280
-- connector: 188
-- negation: 51
-- attribute: 27
+Der ursprüngliche Generator `story_tools/compile_library.py` erzeugt noch den
+0.6a.3-Grundentwurf einschließlich der alten, im finalen Reader nicht mehr verwendeten
+Satzgliedvorschläge. Auf diesen Grundentwurf folgen daher zwingend:
 
-## Offene Review-Punkte
+```bash
+python story_tools/compile_library.py
+python story_tools/editorial_tools.py
+python story_tools/polish_lexicon_06a4.py
+python story_tools/test_06a4.py
+```
 
-- Automatische Erkennung ist kein Ersatz für individuelle Syntaxprüfung. Vor echter Veröffentlichung besonders Cine Luna B1 prüfen.
-- Die Textaufteilung in eigenständige Sätze ist grammatisch nicht immer ideal, etwa bei eingeschobenen Sprecherangaben; Quellabsätze sind erhalten.
-- Die A1-Geschichte enthält wenige Formen und Wörter oberhalb reiner A1-Grundlagen. Diese werden durch den Reader erklärt, aber sollten im nächsten didaktischen Lektorat überarbeitet werden.
-- Die Wortliste wird bewusst noch nicht erweitert; die Ergänzung um nützliche Storyvokabeln wird pro Geschichte separat entschieden.
+Achtung: Ein alleiniger Aufruf von `compile_library.py` oder `editorial_tools.py`
+überschreibt den finalen Export! Nur die vollständige Pipeline liefert 0.6a.4.
+
+Die echte spätere Studio-Architektur soll diese Redaktionsschritte in eine
+visuelle Oberfläche integrieren und alle überprüften Daten als eigenständige
+Story-Datei exportieren.
