@@ -11,8 +11,8 @@ const MASTERED_FREE=7; // Vorläufig: sieben erfolgreiche freie Abrufe in Folge 
 const DECKS=["Erste Gespräche","Mein Alltag","Unterwegs & Reisen","Erlebnisse & Beziehungen","Freies Kommunizieren"];
 const newProgress=()=>({discoveredOn:null,introducedOn:null,passive:{due:null,level:0,freeDates:[],freeStreak:0,reviews:0,last:null},active:{unlocked:false,due:null,level:0,freeDates:[],freeStreak:0,reviews:0,last:null}});
 const seed=window.PALABRA_SEED||[];
-const WORD_CLASSES={noun:'Substantiv',verb:'Verb',adjective:'Adjektiv',adverb:'Adverb',phrase:'Wendung',pronoun:'Pronomen',determiner:'Begleiter',quantifier:'Mengenwort',interrogative:'Fragewort',preposition:'Präposition',conjunction:'Konjunktion',numeral:'Zahlwort',interjection:'Ausruf',particle:'Partikel',other:'Sonstiges'};
-function initial(){return{version:1,created:iso(),settings:{dailyNew:20,extraDate:null,extraBlocks:0},words:seed.map(w=>({...w,progress:newProgress()})),history:[],collections:[]}}
+const WORD_CLASSES={noun:'Substantiv',verb:'Verb',adjective:'Adjektiv',adverb:'Adverb',phrase:'Wendung',pronoun:'Pronomen',determiner:'Begleiter',quantifier:'Mengenwort',interrogative:'Fragewort',preposition:'Präposition',conjunction:'Konjunktion',numeral:'Zahlwort',interjection:'Ausruf',particle:'Partikel',other:'Sonstiges',name:'Eigenname'};
+function initial(){return{version:1,created:iso(),settings:{dailyNew:20,extraDate:null,extraBlocks:0},words:seed.map(w=>({...w,progress:newProgress()})),history:[],collections:[],discovery:{packages:{}}}}
 function validate(data){if(!data||data.version!==1||!Array.isArray(data.words)||!data.settings||!Array.isArray(data.history))throw Error('Ungültiges oder inkompatibles Palabra-Backup.');if(data.words.length>30000)throw Error('Zu viele Wörter im Backup.');for(const w of data.words){if(typeof w.es!=='string'||typeof w.de!=='string'||!w.progress||!w.progress.passive||!w.progress.active)throw Error('Beschädigte Vokabeleinträge.')}return data}
 let data;try{const stored=localStorage.getItem(KEY);data=stored?validate(JSON.parse(stored)):initial()}catch(e){data=initial();alert('Gespeicherte Daten konnten nicht gelesen werden. Bitte stelle ggf. ein Backup wieder her.')} 
 function save(){try{localStorage.setItem(KEY,JSON.stringify(data));return true}catch(e){alert('Speichern fehlgeschlagen! Bitte Speicherplatz prüfen und sofort ein Backup exportieren.');return false}}
@@ -27,6 +27,19 @@ function normalizeCollections(){
  }));
 }
 normalizeCollections();
+// 0.7a.1: additive, version-1-compatible discovery journal. Existing SRS records
+// stay authoritative; completed old packages do not need artificial migrations.
+function normalizeDiscovery(){
+ if(!data.discovery||typeof data.discovery!=='object'||Array.isArray(data.discovery))data.discovery={packages:{}};
+ if(!data.discovery.packages||typeof data.discovery.packages!=='object'||Array.isArray(data.discovery.packages))data.discovery.packages={};
+ for(const [key,record] of Object.entries(data.discovery.packages)){
+  if(!/^palabra-basis-[1-5]:\d+$/.test(key)||!record||typeof record!=='object'){delete data.discovery.packages[key];continue}
+  const known=new Set(data.words.filter(w=>`${w.deck_id}:${w.package}`===key).map(w=>w.id));
+  record.seenIds=[...new Set((Array.isArray(record.seenIds)?record.seenIds:[]).filter(id=>typeof id==='string'&&known.has(id)))];
+  record.lastIndex=Number.isInteger(record.lastIndex)&&record.lastIndex>=0?record.lastIndex:0;
+ }
+}
+normalizeDiscovery();
 if(!localStorage.getItem(KEY))save();
 
 // 0.5b.5: migrate all 1,000 canonical cards in-place, retaining SRS only for
@@ -69,7 +82,7 @@ function reconcileUnlocks(){
  if(changed)save();
 }
 reconcileUnlocks();
-const introducedCount=()=>data.words.filter(w=>!!w.progress.passive.introducedOn).length;
+const introducedCount=()=>data.words.filter(w=>w.deck_id!=='palabra-story-lexicon'&&!!w.progress.passive.introducedOn).length;
 const unlockedCount=()=>data.words.filter(eligibleForActive).length;
 function streakInfo(){
  const dates=new Set(data.history.filter(h=>h&&typeof h.date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(h.date)).map(h=>h.date));
@@ -78,53 +91,229 @@ function streakInfo(){
  while(dates.has(day)){count++;day=addDays(day,-1)}
  return {count,learnedToday:dates.has(iso())};
 }
-function introducedToday(){return data.words.filter(w=>w.progress.passive.introducedOn===iso()).length}
+function introducedToday(){return data.words.filter(w=>w.deck_id!=='palabra-story-lexicon'&&w.progress.passive.introducedOn===iso()&&w.progress.storyAddedOn!==iso()).length}
 function extraBlocksToday(){return data.settings.extraDate===iso()?data.settings.extraBlocks:0}
 function dailyAllowance(){return data.settings.dailyNew+20*extraBlocksToday()}
-function remainingFresh(){return data.words.filter(w=>!w.progress.passive.introducedOn).length}
+function remainingFresh(){return data.words.filter(w=>w.deck_id!=='palabra-story-lexicon'&&!w.progress.passive.introducedOn).length}
 // Separate queues: passive introduces new cards; active practices already introduced words.
 // The direction and category are only session filters, never separate word databases.
 let wordsSubview='all', selectedCollectionId=null, collectionQuery='', pickerWordId=null;
-let selectedDirection='passive',selectedCategory='all',selectedDeck=data.settings.lastDeck||'palabra-basis-1',selectedPackage=data.settings.lastPackage||'next',statsDirection='passive';
+let selectedDirection=data.settings.lastDirection==='active'?'active':'passive',selectedCategory='all',selectedDeck=data.settings.lastDeck||'palabra-basis-1',selectedPackage=data.settings.lastPackage||'next',statsDirection='passive';
 const isReviewOnly=()=>selectedDeck==='all'||selectedPackage==='all';
 const deckOf=w=>w.deck_id||'palabra-basis-1';
-const deckFilter=w=>selectedDeck==='all'||deckOf(w)===selectedDeck;
+const deckFilter=w=>selectedDeck==='all'?DECKS.some((_,i)=>deckOf(w)===`palabra-basis-${i+1}`):deckOf(w)===selectedDeck;
 const packFilter=w=>selectedPackage==='next'||selectedPackage==='all'||String(w.package)===selectedPackage;
 const mastered=w=>Number(w.progress.passive.freeStreak||0)>=MASTERED_FREE&&Number(w.progress.passive.level||0)>=6;
-function currentNextPackage(){const pool=data.words.filter(deckFilter);const first=pool.find(w=>!w.progress.passive.introducedOn);return first?first.package:null;}
+function currentNextPackage(){const pool=data.words.filter(deckFilter).sort((a,b)=>(Number(a.learning_order)||0)-(Number(b.learning_order)||0));const first=pool.find(w=>!w.progress.passive.introducedOn);return first?first.package:null;}
 function freshFilter(w){return selectedPackage==='next'?w.package===currentNextPackage():packFilter(w)}
 function categories(){return [...new Set(data.words.map(w=>w.category||'Alltag'))].sort((a,b)=>a.localeCompare(b,'de'))}
 function inCategory(w){return !isReviewOnly()||selectedCategory==='all'||(w.category||'Alltag')===selectedCategory}
 function candidates(dir=selectedDirection){
- const now=iso(),due=[],fresh=[];
- for(const w of data.words){if(!deckFilter(w)||!inCategory(w))continue;
+ const now=iso(),due=[];
+ for(const w of data.words){
+  if(!deckFilter(w)||!inCategory(w)||!packFilter(w))continue;
   const p=w.progress.passive,a=w.progress.active;
-  if(dir==='passive'){
-   if(p.introducedOn){if(packFilter(w)&&p.due&&p.due<=now)due.push({id:w.id,dir,due:p.due})}
-   else if(!isReviewOnly()&&freshFilter(w))fresh.push({id:w.id,dir,due:now,new:true});
-  }else if(packFilter(w)&&eligibleForActive(w)){
-   // Active is available only after three spaced free-recall successes.
-   if(a.reviews===0)fresh.push({id:w.id,dir,due:now,new:true});
-   else if(a.due&&a.due<=now)due.push({id:w.id,dir,due:a.due});
-  }
+  if(dir==='passive'&&p.introducedOn&&p.due&&p.due<=now)due.push({id:w.id,dir,due:p.due});
+  if(dir==='active'&&eligibleForActive(w)&&a.due&&a.due<=now)due.push({id:w.id,dir,due:a.due});
  }
- due.sort((a,b)=>a.due.localeCompare(b.due));fresh.sort((a,b)=>wordFor(a).learning_order-wordFor(b).learning_order);
- return dir==='passive'?[...due,...fresh.slice(0,Math.max(0,dailyAllowance()-introducedToday()))]:[...due,...fresh];
+ due.sort((a,b)=>a.due.localeCompare(b.due));
+ return due;
+}
+let learnScreen='overview',browseCards=[],browseIndex=0,browseRevealed=false,browseMode='browse',browseDeck='',browsePack='';
+function packageWords(deck,pack){return data.words.filter(w=>deckOf(w)===deck&&String(w.package)===String(pack)).sort((a,b)=>Number(a.learning_order)-Number(b.learning_order))}
+function discoveryKey(deck,pack){return `${deck}:${pack}`}
+function discoveryRecord(deck,pack){return data.discovery.packages[discoveryKey(deck,pack)]||null}
+function isPackageComplete(deck,pack){const cards=packageWords(deck,pack);return cards.length>0&&cards.every(w=>!!w.progress.passive.introducedOn)}
+function packageSeenIds(deck,pack){
+ const seen=new Set(discoveryRecord(deck,pack)?.seenIds||[]);
+ for(const w of packageWords(deck,pack))if(w.progress.passive.introducedOn)seen.add(w.id);
+ return seen;
+}
+function canBrowsePackage(deck,pack){
+ if(!/^palabra-basis-[1-5]$/.test(deck)||!/^[0-9]+$/.test(String(pack)))return false;
+ return packageWords(deck,pack).length>0&&(devMode||packageSeenIds(deck,pack).size>0);
+}
+function openPackageBrowse(){
+ if(!canBrowsePackage(selectedDeck,selectedPackage))return;
+ browseMode='browse';browseDeck=selectedDeck;browsePack=selectedPackage;
+ browseCards=packageWords(browseDeck,browsePack);
+ browseIndex=0;browseRevealed=false;showLearnScreen('browse');renderPackageBrowse();
+}
+function openDiscovery(deck=selectedDeck,pack=selectedPackage){
+ if(!/^palabra-basis-[1-5]$/.test(deck)||!/^[0-9]+$/.test(String(pack)))return;
+ selectedDeck=deck;selectedPackage=String(pack);
+ if(isPackageComplete(deck,pack)){
+  openPackageBrowse();return;
+ }
+ browseMode='discovery';browseDeck=deck;browsePack=String(pack);
+ browseCards=packageWords(deck,pack);if(!browseCards.length)return;
+ const existing=discoveryRecord(deck,pack);
+ browseIndex=Math.min(browseCards.length-1,Math.max(0,existing?.lastIndex||0));
+ browseRevealed=false;showLearnScreen('browse');renderPackageBrowse();
+}
+function revealBrowse(){
+ browseRevealed=true;
+ if(browseMode==='discovery'){
+  const key=discoveryKey(browseDeck,browsePack),old=discoveryRecord(browseDeck,browsePack);
+  const record=old||{seenIds:[],lastIndex:0};
+  const w=browseCards[browseIndex];
+  if(!record.seenIds.includes(w.id))record.seenIds.push(w.id);
+  record.lastIndex=browseIndex;
+  data.discovery.packages[key]=record;
+  save(); // Discovery-only progress: does not touch words[].progress, SRS or history.
+ }
+ renderPackageBrowse();
+}
+function finishDiscovery(){
+ if(browseMode!=='discovery'||!browseCards.length||browseCards.some(w=>!packageSeenIds(browseDeck,browsePack).has(w.id)))return;
+ const before=browseCards.map(w=>JSON.stringify(w.progress));
+ const record=discoveryRecord(browseDeck,browsePack),beforeCompleted=record?.completedOn;
+ const today=iso();
+ for(const w of browseCards){
+  // Do not modify a previously introduced card, its level, due date or reviews.
+  if(w.progress.passive.introducedOn)continue;
+  w.progress.discoveredOn=w.progress.discoveredOn||today;
+  w.progress.passive.introducedOn=today;
+  w.progress.passive.due=w.progress.passive.due||addDays(today,1);
+ }
+ if(record)record.completedOn=today;
+ if(!save()){
+  browseCards.forEach((w,i)=>{w.progress=JSON.parse(before[i])});
+  if(record)record.completedOn=beforeCompleted;
+  return;
+ }
+ browseMode='finished';renderPackageBrowse();updateHome();
+}
+function renderPackageBrowse(){
+ if(learnScreen!=='browse'||!browseCards.length)return;
+ const discovery=browseMode==='discovery',finished=browseMode==='finished',w=browseCards[browseIndex];
+ const seen=packageSeenIds(browseDeck,browsePack);
+ $('browseEyebrow').textContent=discovery?'ENTDECKEN · OHNE SRS':finished?'PAKET ENTDECKT':'OHNE SRS · FREIES ANSEHEN';
+ $('browseTitle').textContent=w.learning_goal||'Themenpaket';
+ $('browseSubtitle').textContent=`${fullDeckName(browseDeck)} · Paket ${w.package_in_deck||''} · ${browseCards.length} Wörter`;
+ if(finished){
+  $('browseContent').innerHTML=`<div class="discovery-finish"><div class="big-emoji">✦</div><h2>Alle ${browseCards.length} Wörter entdeckt!</h2><p>Du hast dein Paket kennengelernt. Die neuen Wörter sind jetzt im Wiederholungspool und werden frühestens morgen fällig – ganz ohne heutige SRS-Bewertung.</p><button class="primary" type="button" id="discoveryExit">Zur Paketauswahl →</button><button class="secondary" type="button" id="discoveryReviewBrowse">Paket noch einmal ansehen</button></div>`;
+  $('discoveryExit').onclick=()=>{selectedDeck=browseDeck;selectedPackage=browsePack;showLearnScreen('deck')};
+  $('discoveryReviewBrowse').onclick=()=>{browseMode='browse';browseIndex=0;browseRevealed=false;renderPackageBrowse()};
+  return;
+ }
+ const allSeen=browseCards.every(card=>seen.has(card.id));
+ const last=browseIndex===browseCards.length-1;
+ const nextLabel=discovery?(last?(allSeen?'Paket abschließen ✓':'Weitere Wörter ansehen →'):'Weiter →'):(last?'Fertig ✓':'Weiter →');
+ $('browseContent').innerHTML=`<div class="browse-progress"><span>Wort ${browseIndex+1} von ${browseCards.length}</span><span>${discovery?`${seen.size}/${browseCards.length} angesehen`:escape(w.category||'')}</span></div>
+  <div class="browse-word" lang="es">${escape(w.es)}</div>
+  ${browseRevealed?`<div class="browse-answer"><small>DEUTSCH</small><strong lang="de">${escape(w.de)}</strong>${w.example?`<p lang="es">${escape(w.example)}</p>`:''}</div>`:'<button type="button" class="secondary" id="browseReveal">Bedeutung entdecken</button>'}
+  <div class="browse-navigation"><button type="button" class="secondary" id="browsePrev" ${browseIndex===0?'disabled':''}>← Zurück</button><button type="button" class="primary" id="browseNext" ${discovery&&!browseRevealed&&!seen.has(w.id)?'disabled':''}>${nextLabel}</button></div>
+  <p class="footnote">${discovery?'Ansehen ist keine Prüfung. Erst nach dem kompletten Paket kommen die Wörter in die SRS-Wiederholung.':'Freies Durchblättern verändert keinen Lernstand oder SRS-Termin.'}</p>`;
+ const reveal=$('browseReveal');if(reveal)reveal.onclick=revealBrowse;
+ $('browsePrev').onclick=()=>{if(browseIndex>0){browseIndex--;browseRevealed=false;renderPackageBrowse()}};
+ $('browseNext').onclick=()=>{
+  if(discovery&&last&&allSeen){finishDiscovery();return}
+  if(last&&discovery){const idx=browseCards.findIndex(card=>!seen.has(card.id));browseIndex=idx>=0?idx:0}
+  else if(last){selectedDeck=browseDeck;selectedPackage=browsePack;showLearnScreen('deck');return}
+  else browseIndex++;
+  browseRevealed=false;
+  if(discovery){const record=discoveryRecord(browseDeck,browsePack);if(record){record.lastIndex=browseIndex;save()}}
+  renderPackageBrowse();
+ };
+}
+
+const DECK_ID=i=>`palabra-basis-${i+1}`;
+const learnDeckName=id=>id==='all'?'Alle Basisdecks':`Basis ${Math.max(1,Number(String(id).split('-').pop())||1)}`;
+const fullDeckName=id=>id==='all'?'Gesamtwiederholung':DECKS[Math.max(0,Number(String(id).split('-').pop())-1)]||DECKS[0];
+function withSelection(deck,pack,direction,fn){
+ const prev=[selectedDeck,selectedPackage,selectedDirection,selectedCategory];
+ selectedDeck=deck;selectedPackage=pack;selectedDirection=direction;selectedCategory='all';
+ try{return fn()}finally{[selectedDeck,selectedPackage,selectedDirection,selectedCategory]=prev}
+}
+function dailyDeckId(){
+ const saved=data.settings.lastDeck;
+ if(saved&&DECKS.some((_,i)=>saved===DECK_ID(i))&&data.words.some(w=>deckOf(w)===saved&&!w.progress.passive.introducedOn))return saved;
+ for(let i=0;i<DECKS.length;i++)if(data.words.some(w=>deckOf(w)===DECK_ID(i)&&!w.progress.passive.introducedOn))return DECK_ID(i);
+ return saved&&DECKS.some((_,i)=>saved===DECK_ID(i))?saved:DECK_ID(0);
+}
+function dailyRoute(){
+ const deck=dailyDeckId();
+ return withSelection(deck,'next','passive',()=>({deck,pack:currentNextPackage()}));
+}
+function showLearnScreen(screen){
+ learnScreen=screen;
+ $('learnOverview').hidden=screen!=='overview';
+ $('learnDeckScreen').hidden=screen!=='deck';
+ $('learnSetupScreen').hidden=screen!=='setup';
+ $('learnBrowseScreen').hidden=screen!=='browse';
+ updateHome();
+ if($('learn-hub').classList.contains('active'))window.scrollTo(0,0);
+}
+function chooseLearnDeck(deck){
+ selectedDeck=deck;selectedPackage='next';selectedCategory='all';
+ data.settings.lastDeck=deck;data.settings.lastPackage='next';save();
+ showLearnScreen('deck');
+}
+function chooseLearnPackage(pack){
+ selectedPackage=String(pack);selectedCategory='all';
+ data.settings.lastPackage=selectedPackage;save();
+ showLearnScreen('setup');
+}
+function renderDeckTiles(){
+ const root=$('deckTiles');
+ root.innerHTML=DECKS.map((name,i)=>{
+  const id=DECK_ID(i),ws=data.words.filter(w=>deckOf(w)===id);
+  const intro=ws.filter(w=>w.progress.passive.introducedOn).length;
+  const due=ws.filter(w=>w.progress.passive.introducedOn&&w.progress.passive.due&&w.progress.passive.due<=iso()).length;
+  return `<button type="button" class="learn-deck-card" data-deck="${id}"><span class="learn-deck-number">${i+1}</span><span class="learn-item-content"><strong>Basis ${i+1} <span class="learn-deck-title">· ${escape(name)}</span></strong><small>${intro}/200 Wörter entdeckt · ${due} fällig</small><span class="learn-mini-progress"><span style="width:${Math.min(100,intro/2)}%"></span></span></span><span class="learn-item-arrow" aria-hidden="true">›</span></button>`;
+ }).join('');
+ root.querySelectorAll('[data-deck]').forEach(btn=>btn.onclick=()=>chooseLearnDeck(btn.dataset.deck));
+}
+function renderLearnPacks(){
+ if(learnScreen!=='deck')return;
+ $('learnDeckEyebrow').textContent=learnDeckName(selectedDeck).toUpperCase();
+ $('learnDeckHeadline').textContent=fullDeckName(selectedDeck);
+ $('learnDeckSubline').textContent='Entdecke neue Wörter frei und trainiere bereits bekannte Wörter mit SRS.';
+ const ws=data.words.filter(deckFilter);
+ const ids=[...new Set(ws.map(w=>w.package))].sort((a,b)=>a-b);
+ const next=withSelection(selectedDeck,'next','passive',()=>currentNextPackage());
+ const body=[
+  `<button type="button" class="learn-pack-card learn-pack-featured" data-package="next"><span class="learn-pack-number">✦</span><span class="learn-item-content"><strong>Nächstes Entdeckerpaket</strong><small>${next===null?'Alle Wörter entdeckt – jetzt festigen':`Paket ${ws.find(w=>w.package===next)?.package_in_deck||''} · ${escape(ws.find(w=>w.package===next)?.learning_goal||'Entdecken')} · ohne SRS-Bewertung`}</small></span><span class="learn-item-arrow">›</span></button>`,
+  `<button type="button" class="learn-pack-card" data-package="all"><span class="learn-pack-number">↻</span><span class="learn-item-content"><strong>Gesamtes Deck wiederholen</strong><small>Nur bereits eingeführte Wörter</small></span><span class="learn-item-arrow">›</span></button>`
+ ];
+ for(const id of ids){
+  const part=ws.filter(w=>w.package===id);
+  const w=part[0],n=w?.package_in_deck||id,intro=part.filter(w=>w.progress.passive.introducedOn).length;
+  const seen=packageSeenIds(selectedDeck,id).size;
+  body.push(`<button type="button" class="learn-pack-card" data-package="${id}"><span class="learn-pack-number">${n}</span><span class="learn-item-content"><strong>${escape(w?.learning_goal||'Themenpaket')}</strong><small>Paket ${n} von 10 · ${intro===part.length?'Entdeckt ✓':`${seen}/${part.length} angesehen`}</small><span class="learn-mini-progress"><span style="width:${part.length?100*seen/part.length:0}%"></span></span></span><span class="learn-item-arrow">›</span></button>`);
+ }
+ $('learnPackageList').innerHTML=body.join('');
+ $('learnPackageList').querySelectorAll('[data-package]').forEach(btn=>btn.onclick=()=>{if(btn.dataset.package==='next'){const next=currentNextPackage();if(next!==null)openDiscovery(selectedDeck,next);else chooseLearnPackage('all')}else chooseLearnPackage(btn.dataset.package)});
+}
+function renderLearnCategories(){
+ const box=$('categoryWrap');box.hidden=!isReviewOnly();
+ if(box.hidden)return;
+ const available=[...new Set(data.words.filter(w=>deckFilter(w)&&(w.progress.discoveredOn||w.progress.passive.introducedOn)).map(w=>w.category||'Alltag'))].sort((a,b)=>a.localeCompare(b,'de'));
+ if(!available.includes(selectedCategory))selectedCategory='all';
+ $('categoryChoices').innerHTML=['all',...available].map(c=>`<button type="button" class="learn-category-chip ${selectedCategory===c?'chosen':''}" data-category="${escape(c)}" aria-pressed="${selectedCategory===c}">${c==='all'?'Alle Themen':escape(c)}</button>`).join('');
+ $('categoryChoices').querySelectorAll('[data-category]').forEach(btn=>btn.onclick=()=>{selectedCategory=btn.dataset.category;updateHome()});
 }
 function updateSelectors(){
- const tiles=$('deckTiles');
- const tileData=DECKS.map((name,i)=>{const id=`palabra-basis-${i+1}`;const ws=data.words.filter(w=>deckOf(w)===id);const intro=ws.filter(w=>w.progress.passive.introducedOn).length;const due=ws.filter(w=>w.progress.passive.introducedOn&&w.progress.passive.due&&w.progress.passive.due<=iso()).length;return {id,name,i,intro,due}});
- tiles.innerHTML=tileData.map(d=>`<button type="button" class="deck-tile ${selectedDeck===d.id?'is-selected':''}" data-deck="${d.id}" aria-pressed="${selectedDeck===d.id}"><span class="deck-tile-head"><span class="deck-chip">Basis ${d.i+1}</span><span class="deck-check">${selectedDeck===d.id?'✓':''}</span></span><strong>${escape(d.name)}</strong><small>${d.intro}/200 eingeführt · ${d.due} fällig</small><span class="mini-track"><span style="width:${d.intro/2}%"></span></span></button>`).join('')+`<button type="button" class="deck-tile all-tile ${selectedDeck==='all'?'is-selected':''}" data-deck="all" aria-pressed="${selectedDeck==='all'}"><span class="deck-tile-head"><span class="deck-chip">Gesamt</span><span class="deck-check">${selectedDeck==='all'?'✓':''}</span></span><strong>Alle Basisdecks</strong><small>Gemeinsam wiederholen</small></button>`;
- tiles.querySelectorAll('[data-deck]').forEach(btn=>btn.onclick=()=>{selectedDeck=btn.dataset.deck;selectedPackage=selectedDeck==='all'?'all':'next';selectedCategory='all';data.settings.lastDeck=selectedDeck;data.settings.lastPackage=selectedPackage;save();updateHome()});
- const pack=$('packageSelect');let opts='<option value="next">Empfohlenes nächstes Paket + Wiederholungen</option><option value="all">Gesamtes Deck wiederholen (nur bekannte Wörter)</option>';
- const ids=[...new Set(data.words.filter(deckFilter).map(w=>w.package))].sort((a,b)=>a-b);
- for(const id of ids){const first=data.words.find(w=>w.package===id);const n=first.package_in_deck;const introduced=data.words.filter(w=>w.package===id&&w.progress.passive.introducedOn).length;opts+=`<option value="${id}">Paket ${n}: ${escape(first.learning_goal)} (${introduced}/20)</option>`}
- pack.innerHTML=opts;if(selectedPackage!=='next'&&selectedPackage!=='all'&&!ids.some(x=>String(x)===selectedPackage))selectedPackage='next';pack.value=selectedPackage;
- const dp=$('deckProgress');dp.innerHTML=DECKS.map((name,i)=>{const ws=data.words.filter(w=>w.deck_id===`palabra-basis-${i+1}`);const intro=ws.filter(w=>w.progress.passive.introducedOn).length,master=ws.filter(mastered).length,due=ws.filter(w=>w.progress.passive.introducedOn&&w.progress.passive.due&&w.progress.passive.due<=iso()).length;return `<div class="deck-progress"><b>Basis ${i+1} · ${escape(name)}</b><small>${intro}/200 eingeführt · ${master}/200 gemeistert · ${due} fällig</small><div class="mini-track"><span style="width:${intro/2}%"></span></div></div>`}).join('');
- $('categoryWrap').hidden=!isReviewOnly();
- const el=$('categorySelect'),available=[...new Set(data.words.filter(w=>deckFilter(w)&&(w.progress.discoveredOn||w.progress.passive.introducedOn)).map(w=>w.category||'Alltag'))].sort((a,b)=>a.localeCompare(b,'de')),previous=selectedCategory;
- el.innerHTML='<option value="all">Alle Kategorien</option>'+available.map(c=>`<option value="${escape(c)}">${escape(c)}</option>`).join('');
- if(previous!=='all'&&!available.includes(previous))selectedCategory='all';el.value=selectedCategory;
+ if(learnScreen==='overview')renderDeckTiles();
+ if(learnScreen==='deck')renderLearnPacks();
+ if(learnScreen==='setup'){
+  const deck=learnDeckName(selectedDeck);
+  const wordsInDeck=data.words.filter(deckFilter);
+  const chosen=wordsInDeck.find(w=>String(w.package)===String(selectedPackage));
+  $('learnSetupEyebrow').textContent=deck.toUpperCase();
+  $('learnSetupTitle').textContent=selectedDeck==='all'?'Alle Basisdecks wiederholen':selectedPackage==='next'?'Nächstes Lernpaket':selectedPackage==='all'?'Gesamtes Deck wiederholen':chosen?.learning_goal||'Dein Lernpaket';
+  $('learnSetupSubtitle').textContent=selectedDeck==='all'?'Übergreifende Wiederholung':selectedPackage==='next'?'Nächstes unentdecktes Paket':selectedPackage==='all'?`${fullDeckName(selectedDeck)} · bereits entdeckte Wörter`:`${deck} · Paket ${chosen?.package_in_deck||''} von 10`;
+  renderLearnCategories();
+  const regular=/^\d+$/.test(String(selectedPackage));
+  const canBrowse=canBrowsePackage(selectedDeck,selectedPackage);
+  $('browseLaunch').hidden=!canBrowse;
+  $('discoverLaunch').hidden=!regular||isPackageComplete(selectedDeck,selectedPackage);
+  if(regular&&!isPackageComplete(selectedDeck,selectedPackage)){const seen=packageSeenIds(selectedDeck,selectedPackage).size;$('discoverLaunch').textContent=seen?`Entdecken fortsetzen · ${seen} Wörter angesehen →`:'Paket entdecken · ohne SRS →';}
+  $('browseAvailability').hidden=!regular||canBrowse;
+  $('browseAvailability').textContent='Nach dem ersten angesehenen Wort kannst du das Paket zusätzlich frei durchblättern. Entdecken bleibt davon getrennt.';
+ }
+ const dp=$('deckProgress');dp.innerHTML=DECKS.map((name,i)=>{const ws=data.words.filter(w=>w.deck_id===DECK_ID(i));const intro=ws.filter(w=>w.progress.passive.introducedOn).length,master=ws.filter(mastered).length,due=ws.filter(w=>w.progress.passive.introducedOn&&w.progress.passive.due&&w.progress.passive.due<=iso()).length;return `<div class="deck-progress"><b>Basis ${i+1} · ${escape(name)}</b><small>${intro}/200 entdeckt · ${master}/200 gemeistert · ${due} fällig</small><div class="mini-track"><span style="width:${intro/2}%"></span></div></div>`}).join('');
  $('passiveMode').classList.toggle('selected',selectedDirection==='passive');
  $('activeMode').classList.toggle('selected',selectedDirection==='active');
  $('passiveMode').setAttribute('aria-pressed',String(selectedDirection==='passive'));
@@ -134,18 +323,42 @@ function updateHome(){
  updateSelectors();
  const streak=streakInfo();
  $('streakCount').textContent=streak.count;
- $('streakInfo').textContent=streak.learnedToday?'Heute gelernt – weiter so!':streak.count?'Heute noch eine Karte lernen, um deine Serie fortzusetzen.':'Lerne heute mindestens eine Karte und starte deine Serie.';
- const list=candidates(),due=list.filter(x=>!x.new).length,available=list.filter(x=>x.new).length;
- const dirName=selectedDirection==='passive'?'Passiv (ES → DE)':'Aktiv (DE → ES)';
- $('todaySummary').textContent=list.length?`${dirName}: ${due} fällige Wiederholungen · ${available} neue Karten verfügbar. Pro Runde maximal 20.`:`${dirName}: Für diese Kategorie sind derzeit keine Karten verfügbar.`;
- $('startBtn').textContent=list.length?(introducedToday()<20&&!isReviewOnly()?'Empfohlenes Tagespaket starten →':'Weiterlernen →'):'Für heute alles geschafft ✓';$('startBtn').disabled=!list.length;
- $('dailyProgress').textContent=`${introducedToday()} von ${dailyAllowance()} neuen Wörtern heute eingeführt (passiv, alle Kategorien)`;
- const extra=$('extraBlockBtn');extra.hidden=isReviewOnly()||selectedDirection!=='passive'||remainingFresh()===0||introducedToday()<dailyAllowance()||!data.words.some(w=>deckFilter(w)&&inCategory(w)&&!w.progress.passive.introducedOn&&freshFilter(w));
- $('extraInfo').textContent=selectedDirection==='active'?'Aktiv sind Wörter nach 3 freien passiven Abrufen an unterschiedlichen Tagen und mindestens 7 Tagen Abstand verfügbar. Beide Richtungen haben getrennte Wiederholungen.':remainingFresh()===0?'Alle Basiswörter wurden eingeführt.':`Noch ${remainingFresh()} neue Wörter im Vorrat. Weitere 20er-Blöcke jederzeit möglich.`;
+ $('streakInfo').textContent=streak.learnedToday?'Heute wiederholt – weiter so!':streak.count?'Eine Wiederholungsrunde hält deine Serie am Laufen.':'Wiederhole ein paar Wörter und starte deine Serie.';
+ const daily=dailyRoute();
+ $('learnDailyDeck').textContent=learnDeckName(daily.deck)+' · '+fullDeckName(daily.deck);
+ const example=daily.pack===null?null:data.words.find(w=>deckOf(w)===daily.deck&&w.package===daily.pack);
+ $('learnDailyPack').textContent=example?`Paket ${example.package_in_deck||''} · ${example.learning_goal||''}`:'Alle 50 Basispakete entdeckt';
+ const seen=daily.pack===null?0:packageSeenIds(daily.deck,daily.pack).size;
+ $('todaySummary').textContent=daily.pack===null?'Deine Entdeckungsreise ist komplett. Du kannst jedes Paket weiterhin frei ansehen.':`${seen}/20 Wörter bereits angesehen · ohne SRS-Bewertung`;
+ $('dailyProgress').textContent='Du bestimmst dein Tempo. Nach einem vollständigen Durchgang werden neue Wörter zur Wiederholung eingeplant.';
+ $('dailyQuickStart').disabled=daily.pack===null;
+ $('dailyQuickStart').innerHTML=daily.pack===null?'Alle Pakete entdeckt ✓':seen?'Entdeckung fortsetzen <span aria-hidden="true">→</span>':'Paket entdecken <span aria-hidden="true">→</span>';
+ const allDue=withSelection('all','all','passive',()=>candidates('passive'));
+ const allActive=withSelection('all','all','active',()=>candidates('active'));
+ $('dailyReviewSummary').textContent=`${allDue.length} passive Karten fällig · ${allActive.length} aktive Karten fällig. Bis zu 20 je Runde.`;
+ $('dailyReviewBtn').disabled=!allDue.length;
+ $('dailyReviewBtn').textContent=allDue.length?'Fällige Wörter wiederholen →':'Derzeit nichts fällig ✓';
+ const list=candidates(),due=list.length;
+ const regular=/^[0-9]+$/.test(String(selectedPackage));
+ const needsDiscovery=regular&&!isPackageComplete(selectedDeck,selectedPackage);
+ $('learnSetupSummary').textContent=due?`${selectedDirection==='passive'?'Passiv (ES → DE)':'Aktiv (DE → ES)'}: ${due} fällige SRS-Karten. Maximal 20 pro Runde.`:needsDiscovery?'Dieses Paket ist noch in der Entdeckungsphase. Du kannst es oben ohne Bewertung kennenlernen.':`Für diese Auswahl sind aktuell keine ${selectedDirection==='passive'?'passiven':'aktiven'} Wiederholungen fällig.`;
+ $('startBtn').disabled=!due;
+ $('startBtn').innerHTML=due?'SRS-Wiederholung starten <span aria-hidden="true">→</span>':'Keine Wiederholungen fällig';
+}
+function startDailySession(){
+ const daily=dailyRoute();
+ if(daily.pack!==null)openDiscovery(daily.deck,daily.pack);
+}
+function startDailyReview(){
+ selectedDeck='all';selectedPackage='all';selectedCategory='all';selectedDirection='passive';
+ startSession(candidates('passive'));
 }
 let sessionCollectionId=null;
 let queue=[],current=null,phase='question',mcOptions=[],selected=-1,mcCorrect=-1,sessionCompleted=0,sessionTotal=0,retries={},seenInSession=new Set(),sessionGrades={free:0,mc:0,unknown:0},sessionUnique=new Set(),sessionNew=0;
-function startSession(items=null,collectionId=null){sessionCollectionId=collectionId;queue=(items||candidates(selectedDirection)).slice(0,20);sessionCompleted=0;sessionTotal=queue.length;sessionGrades={free:0,mc:0,unknown:0};sessionUnique=new Set();sessionNew=0;retries={};seenInSession=new Set();current=null;nextCard();navigate('learn')}
+function startSession(items=null,collectionId=null){
+ // Only arrays are accepted as an explicit queue. A click event must never become a card list.
+ const selectedItems=Array.isArray(items)?items:candidates(selectedDirection);
+ sessionCollectionId=collectionId;queue=selectedItems.slice(0,20);sessionCompleted=0;sessionTotal=queue.length;sessionGrades={free:0,mc:0,unknown:0};sessionUnique=new Set();sessionNew=0;retries={};seenInSession=new Set();current=null;nextCard();navigate('learn')}
 function nextCard(){if(queue.length===0){current=null;renderStudy();return}current=queue.shift();const w=wordFor(current);if(w&&!w.progress.discoveredOn){w.progress.discoveredOn=iso();save()}phase='question';selected=-1;mcOptions=[];mcCorrect=-1;renderStudy()}
 function wordFor(item){return data.words.find(w=>w.id===item.id)}
 // MC uses the exact PDS word class in BOTH directions. Never use a different class
@@ -167,7 +380,7 @@ function makeOptions(w,dir){
  for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]]}return arr;
 }
 function cardTop(w){return `<div class="flashcard"><div class="direction">${current.dir==='passive'?'ESPAÑOL → DEUTSCH':'DEUTSCH → ESPAÑOL'}</div><h2>${escape(current.dir==='passive'?w.es:w.de)}</h2><div class="category">${escape(w.category||'Vokabel')} · ${escape(WORD_CLASSES[w.part_of_speech]||'Wort')}</div></div>`}
-function renderStudy(){const area=$('studyArea');$('sessionProgress').textContent=`${sessionCompleted} geschafft · ${queue.length+(current?1:0)} offen`;$('progressFill').style.width=`${Math.min(100,100*sessionCompleted/Math.max(1,sessionTotal))}%`;if(!current){const avail=sessionCollectionId?collectionDueCards(getCollection(sessionCollectionId),selectedDirection):candidates(selectedDirection);const more=avail.length>0;const canBonus=!sessionCollectionId&&!isReviewOnly()&&selectedDirection==='passive'&&remainingFresh()>0&&introducedToday()>=dailyAllowance()&&data.words.some(w=>deckFilter(w)&&inCategory(w)&&!w.progress.passive.introducedOn&&freshFilter(w));const todayDone=introducedToday()>=20;const total=sessionGrades.free+sessionGrades.mc+sessionGrades.unknown;const percent=total?Math.round(100*sessionGrades.free/total):0;area.innerHTML=`<div class="empty finish"><div class="big-emoji">🎉</div><h2>${sessionCollectionId?'Sammlungsrunde geschafft!':todayDone?'Tagesziel geschafft!':'¡Muy bien! Runde geschafft!'}</h2><p>${sessionCollectionId?'Deine fälligen Sammlungswörter wurden im normalen SRS bewertet.':todayDone?'Dein empfohlenes Tagespaket ist erledigt. Du kannst stolz auf dich sein!':'Stark gemacht! Jeder freie Abruf bringt dich weiter.'}</p><div class="session-stats"><div><strong>${sessionUnique.size}</strong><small>Verschiedene Wörter</small></div><div><strong>${sessionNew}</strong><small>Neue Wörter</small></div><div><strong>${percent} %</strong><small>Frei gewusst</small></div><div><strong>${sessionGrades.free}</strong><small>Frei richtig</small></div><div><strong>${sessionGrades.mc}</strong><small>Mit Auswahl</small></div><div><strong>${sessionGrades.unknown}</strong><small>Noch üben</small></div></div><p class="footnote">${total} Antworten inklusive Wiederholungsversuchen. Die Wiederholungstermine bleiben gespeichert.</p>${more?'<button class="primary" id="continueBtn">Weiterlernen →</button>':canBonus?'<button class="primary" id="bonusFinishBtn">Bonusrunde starten · +20 Wörter →</button>':sessionCollectionId?'<div class="done-note">In dieser Sammlung sind derzeit keine weiteren Karten fällig.</div>':'<div class="done-note">Für dieses Deck sind aktuell keine weiteren Karten fällig. ¡Hasta pronto!</div>'}<button class="secondary" id="finishBtn">${sessionCollectionId?'Zur Sammlung':'Zur Übersicht'}</button></div>`;$('finishBtn').onclick=()=>{if(sessionCollectionId){wordsSubview='collections';selectedCollectionId=sessionCollectionId;navigate('words')}else navigate('home')};if(more)$('continueBtn').onclick=()=>sessionCollectionId?startCollectionReview(sessionCollectionId,selectedDirection):startSession();if(canBonus&&!more)$('bonusFinishBtn').onclick=grantBonus;return}
+function renderStudy(){const area=$('studyArea');$('sessionProgress').textContent=`${sessionCompleted} geschafft · ${queue.length+(current?1:0)} offen`;$('progressFill').style.width=`${Math.min(100,100*sessionCompleted/Math.max(1,sessionTotal))}%`;if(!current){const avail=sessionCollectionId?collectionDueCards(getCollection(sessionCollectionId),selectedDirection):candidates(selectedDirection);const more=avail.length>0;const total=sessionGrades.free+sessionGrades.mc+sessionGrades.unknown;const percent=total?Math.round(100*sessionGrades.free/total):0;area.innerHTML=`<div class="empty finish"><div class="big-emoji">🎉</div><h2>${sessionCollectionId?'Sammlungsrunde geschafft!':'¡Muy bien! Wiederholung geschafft!'}</h2><p>${sessionCollectionId?'Deine fälligen Sammlungswörter wurden im normalen SRS bewertet.':'Stark gemacht! Jeder freie Abruf bringt dich weiter.'}</p><div class="session-stats"><div><strong>${sessionUnique.size}</strong><small>Verschiedene Wörter</small></div><div><strong>${percent} %</strong><small>Frei gewusst</small></div><div><strong>${sessionGrades.free}</strong><small>Frei richtig</small></div><div><strong>${sessionGrades.mc}</strong><small>Mit Auswahl</small></div><div><strong>${sessionGrades.unknown}</strong><small>Noch üben</small></div></div><p class="footnote">${total} Antworten inklusive Wiederholungsversuchen. Die Wiederholungstermine bleiben gespeichert.</p>${more?'<button class="primary" id="continueBtn">Weiterlernen →</button>':sessionCollectionId?'<div class="done-note">In dieser Sammlung sind derzeit keine weiteren Karten fällig.</div>':'<div class="done-note">Für dieses Deck sind aktuell keine weiteren Karten fällig. ¡Hasta pronto!</div>'}<button class="secondary" id="finishBtn">${sessionCollectionId?'Zur Sammlung':'Zur Übersicht'}</button></div>`;$('finishBtn').onclick=()=>{if(sessionCollectionId){wordsSubview='collections';selectedCollectionId=sessionCollectionId;navigate('words')}else navigate('learn-hub')};if(more)$('continueBtn').onclick=()=>sessionCollectionId?startCollectionReview(sessionCollectionId,selectedDirection):startSession();return}
 const w=wordFor(current);let html=cardTop(w);
 if(phase==='question'){const mcAvailable=optionPool(w,current.dir).length>=3;html+=`<p class="prompt">Überlege dir die Übersetzung. Du musst nichts eintippen.</p><div class="actions"><button class="primary" id="knowBtn">Weiß ich → Lösung zeigen</button><button class="secondary" id="mcBtn" ${mcAvailable?'':'disabled title="Nicht genügend Antworten derselben Wortart"'}>Multiple Choice</button><button class="ghost" id="unknownBtn">Weiß nicht → Lösung</button></div>${mcAvailable?'':'<p class="prompt">Für diese Wortart gibt es noch nicht genügend unterschiedliche MC-Antworten.</p>'}` }
 if(phase==='reveal'){html+=`<div class="answer-box"><div class="label">DIE LÖSUNG</div><strong>${escape(current.dir==='passive'?w.de:w.es)}</strong><em>${escape(w.example)}</em></div><p class="prompt">Hattest du die Übersetzung wirklich richtig im Kopf?</p><div class="actions"><button class="primary" id="yesBtn">Ja, frei gewusst ✓</button><button class="secondary" id="noBtn">Nein, nicht gewusst</button></div>`}
@@ -218,12 +431,92 @@ function renderWords(){
  (level==='all'||masteryBucket(w,statsDirection)===level));
  const groups=new Map();for(const w of filtered){const key=w.category||'Alltag';if(!groups.has(key))groups.set(key,[]);groups.get(key).push(w)}
  const sorted=[...groups].sort(([a],[b])=>a.localeCompare(b,'de'));
- $('wordList').innerHTML=sorted.map(([cat,words])=>`<details class="word-group" ${q?'open':''}><summary><span>${escape(cat)}</span><span class="group-count">${words.length} Wörter <span aria-hidden="true">⌄</span></span></summary><div class="group-words">${words.map(w=>`<div class="word-row"><div class="word-row-top"><b>${escape(w.es)}</b>${(devMode||isDiscovered(w))?`<button type="button" class="word-add-button" data-add-word="${escape(w.id)}" aria-label="${escape(w.es)} zu Sammlung hinzufügen" title="Zu Sammlung hinzufügen">＋</button>`:''}</div><span>${escape(w.de)}</span><small>${mastered(w)?'Gemeistert':eligibleForActive(w)?'Aktiv freigeschaltet':'Im Aufbau'} · Basis ${escape((w.deck_id||'').slice(-1))} / Paket ${escape(w.package_in_deck)} · ${escape(WORD_CLASSES[w.part_of_speech]||'Wort')}</small></div>`).join('')}</div></details>`).join('')||`<div class="empty-words"><div>📖</div><h2>${data.words.some(isDiscovered)?'Keine passenden Wörter':'Deine Sammlung wartet auf dich!'}</h2><p>${data.words.some(isDiscovered)?'Versuche einen anderen Suchbegriff oder Filter.':'Starte Basis 1, Paket 1. Jedes Wort erscheint hier, sobald du seine Lernkarte gesehen hast.'}</p></div>`;
+ $('wordList').innerHTML=sorted.map(([cat,words])=>`<details class="word-group" ${q?'open':''}><summary><span>${escape(cat)}</span><span class="group-count">${words.length} Wörter <span aria-hidden="true">⌄</span></span></summary><div class="group-words">${words.map(w=>`<div class="word-row"><div class="word-row-top"><b>${escape(w.es)}</b>${(devMode||isDiscovered(w))?`<button type="button" class="word-add-button" data-add-word="${escape(w.id)}" aria-label="${escape(w.es)} zu Sammlung hinzufügen" title="Zu Sammlung hinzufügen">＋</button>`:''}</div><span>${escape(w.de)}</span><small>${mastered(w)?'Gemeistert':eligibleForActive(w)?'Aktiv freigeschaltet':'Im Aufbau'} · ${w.deck_id==='palabra-story-lexicon'?escape(w.source||'Story-Wort'):`Basis ${escape((w.deck_id||'').slice(-1))} / Paket ${escape(w.package_in_deck)}`} · ${escape(WORD_CLASSES[w.part_of_speech]||'Wort')}</small></div>`).join('')}</div></details>`).join('')||`<div class="empty-words"><div>📖</div><h2>${data.words.some(isDiscovered)?'Keine passenden Wörter':'Deine Sammlung wartet auf dich!'}</h2><p>${data.words.some(isDiscovered)?'Versuche einen anderen Suchbegriff oder Filter.':'Entdecke zuerst ein Themenpaket. Danach findest du seine Wörter hier und im SRS.'}</p></div>`;
  renderWordsSubview();
 }
 
 // 0.5c: personal collections of already-discovered canonical words (shared SRS).
 function getCollection(id){return (data.collections||[]).find(c=>c.id===id)||null}
+
+// PLF 1.0 – scoped, additive Story→Learn pilot. Keep old IDs and SRS state.
+const plf=window.PALABRA_LEXICON||{entries:{},tokens:{}};
+function pilotWord(tokenId){
+ const t=plf.tokens?.[tokenId],entry=t&&plf.entries?.[t.lexeme_id];
+ if(!entry)return null;
+ // One lexeme may have several explicitly curated semantic identities.
+ // For older 0.6a.8 data the s1 entry itself remains the canonical sense.
+ const sense=t.sense_id===entry.sense_id?entry:plf.senses?.[t.sense_id];
+ return sense&&sense.lexeme_id===entry.lexeme_id?{...t,entry,sense}:null;
+}
+function storyCollections(){return data.collections.map(c=>({id:c.id,name:c.name}));}
+function pilotCard(tokenId){
+ const info=pilotWord(tokenId);if(!info)return null;
+ return data.words.find(w=>w.id===info.sense.card_id)||null;
+}
+function previewPilotToken(tokenId){
+ const info=pilotWord(tokenId);if(!info)return null;
+ const word=pilotCard(tokenId),other=[];
+ const selected=info.sense,base=info.entry;
+ if(base.sense_id!==selected.sense_id)other.push({label:'Grundbedeutung',german:base.german});
+ for(const s of Object.values(plf.senses||{})){
+  if(s.lexeme_id===base.lexeme_id&&s.sense_id!==selected.sense_id)other.push({label:s.label||'Weitere Bedeutung',german:s.german});
+ }
+ return {lemma:base.lemma,part_of_speech:base.part_of_speech,meaning:info.meaning,
+  editionId:info.edition_id||'cine-b1',level:info.level||'B1',storyTitle:info.story_title||'Cine Luna',
+  german:word?.de||selected.german,cardId:selected.card_id,senseId:selected.sense_id,
+  isExistingBase:!!selected.existing_card_id,reviewed:selected.status==='pilot-reviewed',
+  alternatives:other,inCollections:data.collections.filter(c=>c.wordIds.includes(selected.card_id)).map(c=>c.id)};
+}
+function registerPilotCard(info){
+ const e=info.entry,sense=info.sense;
+ let w=data.words.find(word=>word.id===sense.card_id);
+ if(w)return w;
+ if(!sense.card_id.startsWith('storylex-'))throw Error('Unbekannte Karten-ID.');
+ if(data.words.length>=30000)throw Error('Maximale Kartenzahl erreicht.');
+ w={id:sense.card_id,es:e.lemma,de:sense.german,part_of_speech:e.part_of_speech,
+  category:'Story · '+(info.story_title||'Geschichte'),level:info.level||'B1',deck_id:'palabra-story-lexicon',
+  lexeme_id:e.lexeme_id,sense_id:sense.sense_id,sense_label:sense.label||'',
+  source:`${info.story_title||'Geschichte'} · ${info.level||'B1'} · Kapitel ${info.chapter_number||String(info.chapter_id||'ch-1').split('-').pop()}`,
+  example:info.example_es,example_de:info.example_de,learning_order:0,package:0,
+  progress:newProgress()};
+ data.words.push(w);
+ return w;
+}
+function addPilotToCollection(tokenId,collectionId){
+ const info=pilotWord(tokenId),c=getCollection(collectionId);
+ if(!info||!c)return {ok:false,message:'Wort oder Sammlung nicht gefunden.'};
+ const oldWord=data.words.find(w=>w.id===info.sense.card_id);
+ const w=registerPilotCard(info),had=c.wordIds.includes(w.id);
+ if(!had){
+  // A word intentionally added from reading becomes immediately due in the collection.
+  // Do not reset existing SRS intervals or reviews.
+  if(!w.progress.passive.introducedOn){
+   w.progress.discoveredOn=w.progress.discoveredOn||iso();
+   w.progress.passive.introducedOn=iso();
+   w.progress.storyAddedOn=iso();
+   w.progress.passive.due=w.progress.passive.due||iso();
+  }
+  c.wordIds.push(w.id);
+ }
+ if(!save()){
+  if(!had)c.wordIds=c.wordIds.filter(id=>id!==w.id);
+  if(!oldWord)data.words=data.words.filter(x=>x!==w);
+  return {ok:false,message:'Speichern fehlgeschlagen. Bitte Backup prüfen.'};
+ }
+ return {ok:true,already:had,wordId:w.id,word:w.es,collection:c.name};
+}
+function createPilotCollection(name){
+ const clean=String(name||'').trim().replace(/\s+/g,' ').slice(0,64);
+ if(!clean)return {ok:false,message:'Bitte einen Namen angeben.'};
+ if(data.collections.length>=100)return {ok:false,message:'Maximal 100 Sammlungen.'};
+ const id='col-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8);
+ data.collections.push({id,name:clean,wordIds:[],createdAt:iso()});
+ if(!save()){data.collections=data.collections.filter(c=>c.id!==id);return {ok:false,message:'Speichern fehlgeschlagen.'}}
+ return {ok:true,id};
+}
+window.PalabraBridge={pilotInfo:previewPilotToken,collections:storyCollections,
+ addStoryWord:addPilotToCollection,createCollection:createPilotCollection};
+
 function collectionWords(c){const ids=new Set(c?.wordIds||[]);return data.words.filter(w=>ids.has(w.id)&&(devMode||isDiscovered(w)))}
 function collectionDueCards(c,dir='passive'){
  if(!c)return[];
@@ -356,7 +649,7 @@ function renderDevPreview(){
  const select=$('devPackageSelect');
  if(!devMode)return;
  if(!select.options.length){
-  const packages=[...new Map(data.words.map(w=>[w.package, w])).values()].sort((a,b)=>a.package-b.package);
+  const packages=[...new Map(data.words.filter(w=>w.deck_id!=='palabra-story-lexicon').map(w=>[w.package, w])).values()].sort((a,b)=>a.package-b.package);
   select.innerHTML=packages.map(w=>`<option value="${escape(w.package)}">Basis ${escape((w.deck_id||'').slice(-1))} · Paket ${escape(w.package_in_deck)} · ${escape(w.learning_goal||'')}</option>`).join('');
  }
  const n=Number(select.value),words=data.words.filter(w=>w.package===n);
@@ -369,18 +662,34 @@ function renderDevControls(){
  $('devModeStatus').textContent=devMode?'Entwicklermodus aktiv: alle Dialoge und Wörter sind sichtbar.':'Entwicklermodus aus: normale Freischaltregeln gelten.';
  renderDevPreview();
 }
-function navigate(name){if(name==='dialogues')PalabraDialogues.render(data,save,navigate);if(name==='stories')PalabraStories.render(data,save,navigate);document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===name));document.querySelectorAll('.nav').forEach(x=>x.classList.toggle('active',x.dataset.page===name));if(name==='home'){updateHome();PalabraDialogues.renderHome(data,navigate)}if(name==='words')renderWords();if(name==='settings')renderDevControls();if(name==='learn'&&!current&&queue.length===0)renderStudy();window.scrollTo(0,0)}
-document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>b.dataset.page==='learn'?(current?navigate('learn'):startSession()):navigate(b.dataset.page));$('startBtn').onclick=startSession;$('openDialogues').onclick=()=>navigate('dialogues');$('openStories').onclick=()=>navigate('stories');
+function navigate(name){
+ // The review screen is internal to Learn, not a navigation destination.
+ if(name==='learn-hub' && current && queue.length) { /* Switching views preserves an unfinished session. */ }
+if(name==='grammar' && window.PalabraGrammar)PalabraGrammar.render();if(name==='dialogues')PalabraDialogues.render(data,save,navigate);if(name==='stories')PalabraStories.render(data,save,navigate);document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===name));document.querySelectorAll('.nav').forEach(x=>x.classList.toggle('active',x.dataset.page===(name==='learn'||name==='dialogues'?'learn-hub':name)));if(name==='learn-hub'){showLearnScreen('overview');PalabraDialogues.renderHome(data,navigate)}if(name==='words')renderWords();if(name==='settings')renderDevControls();if(name==='learn'&&!current&&queue.length===0)renderStudy();window.scrollTo(0,0)}
+document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>navigate(b.dataset.page));
+$('homeToLearn').onclick=()=>navigate('learn-hub');
+$('homeToStories').onclick=()=>navigate('stories');
+$('homeToGrammar').onclick=()=>navigate('grammar');
+if(window.PalabraGrammar)PalabraGrammar.init();
+// Explicit callbacks: passing startSession as a DOM event handler caused the 0.6a.5 crash.
+$('startBtn').onclick=()=>startSession();
+$('dailyQuickStart').onclick=()=>startDailySession();
+$('learnAllReview').onclick=()=>{selectedDeck='all';selectedPackage='all';selectedCategory='all';showLearnScreen('setup')};
+$('learnBackOverview').onclick=()=>showLearnScreen('overview');
+$('learnBackDeck').onclick=()=>showLearnScreen(selectedDeck==='all'?'overview':'deck');
+$('browseBack').onclick=()=>showLearnScreen('deck');
+$('browseLaunch').onclick=openPackageBrowse;
+$('discoverLaunch').onclick=()=>openDiscovery();
+$('dailyReviewBtn').onclick=startDailyReview;
+$('openDialogues').onclick=()=>navigate('dialogues');
 $('devModeToggle').onchange=e=>{devMode=e.target.checked;try{localStorage.setItem(DEV_KEY,String(devMode))}catch(_){}renderDevControls();PalabraDialogues.renderHome(data,navigate);};$('devPackageSelect').onchange=renderDevPreview;
-$('passiveMode').onclick=()=>{selectedDirection='passive';updateHome()};$('activeMode').onclick=()=>{selectedDirection='active';updateHome()};$('categorySelect').onchange=e=>{selectedCategory=e.target.value;updateHome()};
-
-$('packageSelect').onchange=e=>{selectedPackage=e.target.value;selectedCategory='all';data.settings.lastPackage=selectedPackage;save();updateHome()};
-function grantBonus(){if(!remainingFresh())return;const previous=extraBlocksToday();data.settings.extraDate=iso();data.settings.extraBlocks=previous+1;if(!save())return;updateHome();startSession()}$('extraBlockBtn').onclick=grantBonus;$('exitLearn').onclick=()=>navigate('home');$('wordSearch').oninput=renderWords;$('wordStatus').onchange=renderWords;$('wordLevel').onchange=renderWords;$('statsPassive').onclick=()=>{statsDirection='passive';renderWords()};$('statsActive').onclick=()=>{statsDirection='active';renderWords()};
+$('passiveMode').onclick=()=>{selectedDirection='passive';data.settings.lastDirection='passive';save();updateHome()};$('activeMode').onclick=()=>{selectedDirection='active';data.settings.lastDirection='active';save();updateHome()};
+$('exitLearn').onclick=()=>navigate('learn-hub');$('wordSearch').oninput=renderWords;$('wordStatus').onchange=renderWords;$('wordLevel').onchange=renderWords;$('statsPassive').onclick=()=>{statsDirection='passive';renderWords()};$('statsActive').onclick=()=>{statsDirection='active';renderWords()};
 function download(content,name,type){const blob=new Blob([content],{type});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000)}
-$('exportBtn').onclick=()=>{download(JSON.stringify({...data,exportedAt:new Date().toISOString()},null,2),`Palabra-Backup-${iso()}.json`,'application/json');$('backupMessage').textContent='Backup erstellt. Bitte in „Dateien“ sicher aufbewahren.'};
-$('importBackup').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;const el=$('backupMessage');try{const parsed=validate(JSON.parse(await f.text()));if(!confirm(`Backup mit ${parsed.words.length} Wörtern laden? Dein aktueller lokaler Lernstand wird dadurch ersetzt.`))return;data=parsed;normalizeCollections();selectedCollectionId=null;collectionQuery='';pickerWordId=null;if(data.settings.dailyNew===10)data.settings.dailyNew=20;syncCuratedDecks();if(!Number.isFinite(data.settings.extraBlocks))data.settings.extraBlocks=0;reconcileUnlocks();normalizeCollections();save();el.className='notice';el.textContent='Backup erfolgreich wiederhergestellt.';updateHome()}catch(err){el.className='notice error';el.textContent='Import fehlgeschlagen: '+err.message}finally{e.target.value=''}};
+$('exportBtn').onclick=()=>{download(JSON.stringify({...data,grammarA1:window.PalabraGrammarA1?.progress()||undefined,exportedAt:new Date().toISOString()},null,2),`Palabra-Backup-${iso()}.json`,'application/json');$('backupMessage').textContent='Backup erstellt. Bitte in „Dateien“ sicher aufbewahren.'};
+$('importBackup').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;const el=$('backupMessage');try{const parsed=validate(JSON.parse(await f.text()));if(!confirm(`Backup mit ${parsed.words.length} Wörtern laden? Dein aktueller lokaler Lernstand wird dadurch ersetzt.`))return;data=parsed;normalizeCollections();normalizeDiscovery();selectedCollectionId=null;collectionQuery='';pickerWordId=null;if(data.settings.dailyNew===10)data.settings.dailyNew=20;syncCuratedDecks();if(!Number.isFinite(data.settings.extraBlocks))data.settings.extraBlocks=0;reconcileUnlocks();normalizeCollections();save();if(parsed.grammarA1&&window.PalabraGrammarA1)window.PalabraGrammarA1.restore(parsed.grammarA1);el.className='notice';el.textContent='Backup erfolgreich wiederhergestellt.';updateHome()}catch(err){el.className='notice error';el.textContent='Import fehlgeschlagen: '+err.message}finally{e.target.value=''}};
 function parseCSV(text){const out=[];let row=[],cell='',quoted=false;for(let i=0;i<text.length;i++){const c=text[i];if(c==='"'){if(quoted&&text[i+1]==='"'){cell+='"';i++}else quoted=!quoted}else if(c===','&&!quoted){row.push(cell);cell=''}else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&text[i+1]==='\n')i++;row.push(cell);if(row.some(x=>x.trim()))out.push(row);row=[];cell=''}else cell+=c}row.push(cell);if(row.some(x=>x.trim()))out.push(row);return out}
 $('importCsv').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;const el=$('csvMessage');try{const rows=parseCSV((await f.text()).replace(/^\uFEFF/,''));const headers=rows.shift().map(s=>s.trim().toLowerCase());const find=(...keys)=>headers.findIndex(x=>keys.includes(x));const es=find('spanisch','es'),de=find('deutsch','de'),ex=find('beispiel_es','beispiel'),cat=find('kategorie','category');if(es<0||de<0)throw Error('Spalten „Spanisch“ und „Deutsch“ fehlen.');let added=0;const existing=new Set(data.words.map(w=>w.es.trim().toLocaleLowerCase()));for(const r of rows){const spanish=(r[es]||'').trim(),german=(r[de]||'').trim();if(!spanish||!german||existing.has(spanish.toLocaleLowerCase()))continue;data.words.push({id:'w-'+Date.now().toString(36)+'-'+added,es:spanish,de:german,example:ex>=0?(r[ex]||'').trim():'',category:cat>=0?(r[cat]||'Alltag').trim():'Alltag',progress:newProgress()});existing.add(spanish.toLocaleLowerCase());added++}save();el.className='notice';el.textContent=`${added} neue Wörter importiert.`;updateHome()}catch(err){el.className='notice error';el.textContent='CSV-Import fehlgeschlagen: '+err.message}finally{e.target.value=''}};
 function refreshClock(){ $('todayDate').textContent=new Intl.DateTimeFormat('de-DE',{day:'numeric',month:'short'}).format(new Date());if(document.getElementById('home').classList.contains('active'))updateHome()}
-PalabraDialogues.renderHome(data,navigate);refreshClock();document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshClock()});window.addEventListener('focus',refreshClock);
+PalabraDialogues.renderHome(data,navigate);updateHome();refreshClock();document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshClock()});window.addEventListener('focus',refreshClock);
 })();

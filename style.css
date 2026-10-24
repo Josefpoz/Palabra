@@ -373,3 +373,178 @@ body{padding-top:max(25px,env(safe-area-inset-top,0px))}
 
 /* Letztes Wort + Satzzeichen + Fußnoten als untrennbare Einheit. */
 .story-sentence-tail {white-space:nowrap; display:inline;}
+
+
+/* Palabra 0.6a.6: three-pillar home and independent Learn hub. */
+.pillar-hero {padding:34px 0 20px;}
+.pillar-hero h1 {font-size:clamp(40px,10vw,58px);letter-spacing:-2px;line-height:1.06;margin:15px 0 12px;}
+.pillar-hero h1 span {font-size:.45em;color:#86e4bf;vertical-align:super;}
+.pillar-hero p {color:#b2c5d6;font-size:17px;margin:0;line-height:1.55;}
+.pillar-list {display:grid;gap:14px;margin:15px 0 25px;}
+.pillar-card {appearance:none;width:100%;min-height:148px;text-align:left;display:flex;align-items:center;gap:17px;padding:20px 18px;border-radius:21px;background:linear-gradient(115deg,#1a3045 0%,#152337 100%);color:#f1f8fd;border:1px solid #36526a;cursor:pointer;transition:transform .12s,border-color .12s,background .12s;}
+button.pillar-card:hover {transform:translateY(-2px);border-color:#83dbc1;}
+button.pillar-card:focus-visible {outline:3px solid #83dbc1;outline-offset:3px;}
+.pillar-icon {width:57px;height:57px;flex:0 0 57px;border-radius:18px;display:grid;place-items:center;font-size:30px;font-weight:700;background:#244d4a;color:#9eedc8;}
+.pillar-stories {background:#443751;color:#dec6f5;}
+.pillar-grammar {background:#3e4150;color:#b9c8d8;}
+.pillar-description {display:flex;flex-direction:column;gap:7px;min-width:0;flex:1;}
+.pillar-description strong {font-size:21px;letter-spacing:-.5px;}
+.pillar-description small {color:#b0c4d5;line-height:1.5;font-size:13px;}
+.pillar-link {font-size:12px;font-weight:750;color:#8de9c4;margin-top:2px;}
+.pillar-upcoming {cursor:default;opacity:.74;background:#152235;}
+.pillar-soon {align-self:flex-start;color:#c9d6e1;font-size:11px;padding:5px 10px;border:1px solid #48536a;border-radius:15px;margin-top:2px;}
+.pillar-footnote {color:#94a8ba;font-size:13px;line-height:1.6;}
+#learn-hub .hero {padding-top:24px;}
+#learn-hub .home-streak {margin-bottom:18px;}
+#learn-hub .deck-tile {min-height:116px;}
+@media(max-width:400px){.pillar-card{gap:13px;padding:17px 14px;min-height:138px}.pillar-icon{width:50px;height:50px;flex-basis:50px}.pillar-description strong{font-size:19px}.nav{min-width:0}.pillar-hero{padding-top:25px;}}
+
+
+/* Palabra 0.6a.7 · Card-based Learn navigation; all other pillars unchanged. */
+.learn-hero{padding-bottom:7px}.learn-hero h1{margin-bottom:8px}
+.learn-daily-panel{margin-top:16px;padding:20px}
+.learn-daily-route{display:flex;align-items:center;gap:12px;margin:17px 0 10px;padding:12px;border:1px solid #33586a;border-radius:13px;background:#1b3242}
+.learn-daily-dot{width:40px;height:40px;flex:0 0 40px;border-radius:12px;display:grid;place-items:center;background:#27564a;color:#a8f0ca;font-size:24px}
+.learn-daily-route div{display:flex;flex-direction:column;gap:5px;min-width:0}.learn-daily-route strong{font-size:14px;line-height:1.4}.learn-daily-route small{color:#a9bfcc;font-size:12px;line-height:1.4}
+.learn-choice-intro{margin:31px 2px 15px}.learn-choice-intro h2{font-size:21px;margin:0 0 7px}.learn-choice-intro p{font-size:13px;color:#9db0c5;margin:0}
+.learn-deck-list,.learn-package-list{display:grid;gap:11px}
+.learn-deck-card,.learn-pack-card,.learn-review-link{appearance:none;text-align:left;border:1px solid #36516b;background:#182a40;color:#f1f7fa;border-radius:17px;padding:16px 15px;cursor:pointer;display:flex;align-items:center;gap:13px;width:100%;min-height:83px;transition:background .17s,border-color .17s,transform .1s}
+.learn-deck-card:hover,.learn-pack-card:hover,.learn-review-link:hover{background:#213a50;border-color:#63978f}
+.learn-deck-card:active,.learn-pack-card:active,.learn-review-link:active{transform:scale(.992)}
+.learn-deck-card:focus-visible,.learn-pack-card:focus-visible,.learn-review-link:focus-visible{outline:3px solid #8ae0b8;outline-offset:2px}
+.learn-deck-number,.learn-pack-number,.learn-review-icon{display:grid;place-items:center;width:44px;height:44px;flex:0 0 44px;background:#29483f;color:#adeecb;border-radius:13px;font-weight:780;font-size:21px}
+.learn-item-content{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}.learn-item-content strong{font-size:15px;line-height:1.4}.learn-deck-title{font-weight:600;color:#cadbe5}.learn-item-content small{font-size:12px;line-height:1.4;color:#9eb4c8}
+.learn-mini-progress{background:#2b4356;height:4px;width:100%;max-width:220px;border-radius:7px;overflow:hidden;display:block;margin-top:2px}
+.learn-mini-progress span{display:block;height:100%;background:#87dfb8;border-radius:7px}
+.learn-item-arrow{font-size:28px;line-height:1;color:#9bb6bb;padding:0 2px;flex:0 0 13px}
+.learn-review-link{margin-top:16px;min-height:78px;background:#142337;border-style:dashed}.learn-review-icon{background:#263e54;color:#b3cde0}
+.learn-step-back{margin:15px 0 20px;background:none;border:0;color:#a9e9cf;font-size:14px;padding:10px 2px;cursor:pointer;text-align:left}
+.learn-step-heading{margin-bottom:20px}.learn-step-heading h2{font-size:clamp(25px,6vw,33px);line-height:1.16;letter-spacing:-.5px;margin:8px 0 10px}.learn-step-heading p{font-size:14px;line-height:1.55;color:#9db0c5;margin:0}
+.learn-pack-card{min-height:76px}.learn-pack-number{font-size:17px;background:#273b53;color:#d1e0e9}.learn-pack-featured{border-color:#539d86;background:#1a393b}.learn-pack-featured .learn-pack-number{background:#306450;color:#c2f6d9;font-size:25px}
+.learn-setup-panel{margin-top:15px}.learn-setup-panel h2{font-size:17px}.learn-session-summary{display:flex;align-items:flex-start;gap:10px;border-radius:12px;background:#1d3545;padding:12px 13px;margin-top:18px}.learn-session-summary>span{font-size:21px;color:#9cebc8}.learn-session-summary p{font-size:13px;line-height:1.5;color:#ccdee9;margin:1px 0}
+.learn-category-chips{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 0}.learn-category-chip{border-radius:30px;padding:9px 12px;color:#b7c9d5;border:1px solid #39546d;background:#1a2d42;font-size:12px;cursor:pointer}.learn-category-chip.chosen{background:#2b5949;color:#cbf6df;border-color:#89d7b3}
+.learn-setup-panel .filter-label{display:block;margin-top:20px}
+@media(max-width:390px){.learn-deck-card,.learn-pack-card,.learn-review-link{gap:10px;padding:13px 10px}.learn-deck-number,.learn-pack-number,.learn-review-icon{width:38px;height:38px;flex-basis:38px;font-size:18px}.learn-item-content strong{font-size:14px}.learn-item-content small{font-size:11px}.learn-daily-panel{padding:16px}}
+
+.learn-review-link>span:nth-child(2){display:flex;flex:1;min-width:0;flex-direction:column;gap:6px}.learn-review-link>span:nth-child(2) strong{font-size:14px;line-height:1.4}.learn-review-link>span:nth-child(2) small{font-size:12px;line-height:1.5;color:#9eb4c8}
+.primary:disabled{opacity:.56;cursor:default;transform:none}
+
+/* 0.6a.8 Story → Learn Lexikonpilot */
+.story-lexicon-box{margin:14px 0 2px;padding:12px;background:#223b4b;border-radius:12px;border:1px solid #557080;color:#e8f2f2}
+.story-lexicon-title{display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.story-lexicon-title>span{font-size:10px;letter-spacing:.08em;font-weight:700;color:#a5e3c2}
+.story-lexicon-title>strong{font-size:15px}
+.story-lexicon-box p{font-size:12px;margin:8px 0}
+.story-lexicon-caution{display:block;color:#ffd69b;font-size:11px;line-height:1.45}
+.story-lexicon-toggle,.story-lexicon-create{width:100%;margin-top:10px;padding:10px 8px;border-radius:9px;border:1px solid #749e91;color:#d9f7e4;background:#295347;cursor:pointer;font-weight:700;font-size:12px}
+.story-lexicon-collections{margin-top:9px;display:grid;gap:6px}
+.story-lexicon-choice{background:#183145;color:#ebf6f6;border:1px solid #587484;border-radius:9px;display:flex;align-items:center;justify-content:space-between;gap:9px;min-height:41px;text-align:left;padding:8px 11px;cursor:pointer;font-size:12px}
+.story-lexicon-choice span:last-child{color:#b5e6cb;font-weight:700;white-space:nowrap}
+.story-lexicon-feedback{color:#bbebca!important;font-weight:650;line-height:1.5}
+/* 0.6a.8 quality pass: meanings remain hidden unless deliberately expanded. */
+.story-lexicon-meanings{margin:9px 0;padding:8px 10px;border-radius:8px;border:1px solid #587484;background:rgba(13,32,42,.25);font-size:12px}
+.story-lexicon-meanings>summary{cursor:pointer;font-weight:650;color:#cee9e2}
+.story-lexicon-meanings ul{margin:8px 0 5px;padding-left:17px;line-height:1.6}
+.story-lexicon-meanings li{margin:4px 0}
+.story-lexicon-meanings small{display:block;color:#c8d9de;line-height:1.4}
+
+/* Read-only deck browser */
+.learn-browse-launch{margin-top:20px;border-color:#638f88;background:#1c3b40;color:#d9f9e7}
+.learn-browse-panel{margin-top:8px;padding:22px}
+.browse-progress{display:flex;justify-content:space-between;gap:12px;color:#acc4d3;font-size:12px;line-height:1.5}
+.browse-word{text-align:center;font-size:clamp(27px,6.5vw,37px);font-weight:750;color:#f2faf6;margin:35px 0;overflow-wrap:anywhere}
+.browse-answer{text-align:center;border-radius:14px;padding:18px;background:#1c3a43;border:1px solid #3f6a66;margin:18px 0;overflow-wrap:anywhere}
+.browse-answer small{display:block;color:#9be4c1;font-size:11px;letter-spacing:1px;margin-bottom:7px}
+.browse-answer strong{font-size:22px;color:#e1f8e9}
+.browse-answer p{font-size:13px;color:#c3d9db;line-height:1.6;margin:15px 0 0}
+.browse-navigation{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:20px 0 10px}
+.learn-browse-panel .footnote{text-align:center}
+
+.story-lexicon-card-meaning{opacity:.9;font-size:11px!important;margin-top:3px!important}
+
+/* 0.6a.8 · SRS-neutrale, kuratierte Wortschatzvorbereitung für Stories */
+.story-shelf-actions{display:grid;gap:8px}.story-shelf-actions .story-open{width:100%}
+.story-shelf-actions .story-vocab-open{font-size:12px;line-height:1.3;min-height:44px;padding:9px 8px;display:flex;flex-direction:column;gap:2px;text-align:center;border-color:#47635b;background:#203a40;color:#d1f3df}
+.story-vocab-open small{font-size:10px;color:#a6cbbb;font-weight:500}
+.story-vocab-intro h2{font-family:Georgia,serif;letter-spacing:-.025em;font-weight:500;font-size:clamp(26px,6vw,36px);margin:10px 0}
+.story-vocab-intro p{font-size:13px;color:#b0c4ce;line-height:1.65;margin:7px 0}
+.story-vocab-intro p strong{color:#e3f1ed}
+.story-vocab-count{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:25px 0 8px;font-size:11px;color:#b5cdc6;font-weight:700}
+.story-vocab-track{height:5px;border-radius:8px;overflow:hidden;background:#273c4b;margin-bottom:15px}.story-vocab-track>span{display:block;height:100%;background:#86dbb6;transition:width .13s ease}
+.story-vocab-paper{background:#f5efe3;border:1px solid #e6dfcd;color:#26423b;border-radius:20px;min-height:240px;padding:27px 20px;display:flex;flex-direction:column;align-items:center;text-align:center;justify-content:center;box-shadow:0 10px 26px #06101d33}
+.story-vocab-kicker{font-size:10px;font-weight:800;letter-spacing:.17em;color:#507a6c}
+.story-vocab-paper h3{font-family:Georgia,serif;font-weight:500;font-size:clamp(30px,8vw,42px);line-height:1.3;margin:22px 0 20px;overflow-wrap:anywhere}
+.story-vocab-prompt{font-size:13px;color:#667970;margin:1px 0 17px}.story-vocab-paper #vocabReveal{max-width:270px}
+.story-vocab-answer{display:grid;gap:9px;border-top:1px solid #d6d9cb;padding:19px 0 12px;width:100%}
+.story-vocab-answer span{letter-spacing:.12em;color:#658677;font-size:10px;font-weight:800}
+.story-vocab-answer strong{font-size:clamp(19px,5vw,23px);line-height:1.45;font-weight:650}
+.story-vocab-example-trigger{background:transparent;color:#366e5b;border:0;text-decoration:underline;cursor:pointer;font-size:12px;padding:12px 3px;min-height:40px}
+.story-vocab-example{width:100%;background:#e8e8da;padding:12px 15px;border-radius:12px;font-size:13px;line-height:1.55;text-align:left}
+.story-vocab-example p{margin:3px 0 10px}.story-vocab-example p:last-child{margin-bottom:0;color:#526a60}
+.story-vocab-controls{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:12px 0 16px}
+.story-vocab-index{border:1px solid #38536a;border-radius:14px;background:#17293b;margin:15px 0 23px;overflow:hidden}
+.story-vocab-index summary{font-size:13px;font-weight:700;cursor:pointer;padding:14px;color:#b9dece}
+.story-vocab-index-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:2px 10px 13px}
+.story-vocab-index-grid button{min-height:40px;text-align:left;background:#1e3447;color:#dbe9ec;border:1px solid #375066;border-radius:9px;padding:9px 10px;font-size:12px;overflow-wrap:anywhere;cursor:pointer}
+.story-vocab-index-grid button.active{background:#285346;color:#e2fbed;border-color:#78d7ae}
+.story-vocab-transfer{border:1px solid #345668;border-radius:18px;background:#17293a;padding:18px;margin:18px 0 16px}
+.story-vocab-transfer-head strong{color:#e4f5e8}.story-vocab-transfer-head p{color:#a8c0ca;font-size:12px;line-height:1.65;margin:8px 0 15px}
+.story-vocab-transfer>.secondary{font-size:13px;min-height:42px}
+.story-vocab-collections{display:grid;gap:7px;margin:12px 0}
+.story-vocab-collections button{display:flex;align-items:center;justify-content:space-between;gap:9px;border-radius:10px;border:1px solid #476d64;background:#203e43;color:#dbf3e7;min-height:43px;text-align:left;padding:10px 12px;font-size:12px;cursor:pointer}
+.story-vocab-collections button span:last-child{font-size:11px;color:#a8edca;text-align:right}
+.story-vocab-feedback:not(:empty){font-size:12px;line-height:1.5;color:#b4eccf;margin:13px 0 0}
+.story-vocab-warning{font-size:12px;color:#f2c7ac}
+.story-vocab-to-read{margin:17px 0 24px}
+@media(max-width:390px){.story-vocab-index-grid{grid-template-columns:1fr 1fr}.story-vocab-paper{padding:22px 14px}.story-vocab-transfer{padding:14px}.story-vocab-intro h2{font-size:28px}}
+
+/* 0.6a.8g1 · Palabra Grammar – Die Satzwerkstatt */
+.pillar-grammar{background:#3c4b59;color:#c3e9dd}
+.gram-hero{padding:28px 0 17px}.gram-hero h1{font-family:Georgia,"Times New Roman",serif;font-size:clamp(32px,8vw,43px);font-weight:500;line-height:1.13;letter-spacing:-.8px;margin:11px 0}.gram-hero p{font-size:14px;color:#b7cbd4;line-height:1.65;margin:0;max-width:430px}
+.gram-path-intro{display:flex;align-items:flex-start;gap:17px;padding:21px 18px;border-radius:22px;background:linear-gradient(135deg,#223b47,#192b3c);border:1px solid #496a70;margin:12px 0 26px}.gram-path-icon{width:49px;height:49px;border-radius:16px;background:#315849;display:grid;place-items:center;flex:none;font-size:28px;color:#adf3cd}.gram-path-intro h2{font-family:Georgia,serif;font-size:25px;font-weight:500;margin:7px 0}.gram-path-intro p{font-size:13px;color:#bbd0d2;line-height:1.65;margin:0}.gram-unit-heading{display:flex;justify-content:space-between;gap:9px;align-items:center;margin-bottom:13px}.gram-unit-heading h2{font-size:18px;margin:0}.gram-subtle{color:#97bdad;font-size:11px}
+.gram-lesson-list{display:grid;gap:10px}.gram-lesson-card{width:100%;background:#16293b;border:1px solid #38556a;border-radius:17px;padding:15px 12px;display:flex;gap:12px;align-items:center;color:#eff5f4;text-align:left;cursor:pointer}.gram-lesson-card:focus-visible,.gram-token:focus-visible,.gram-role-token:focus-visible,.gram-bank-chip:focus-visible,.gram-built:focus-visible{outline:3px solid #85e3bd;outline-offset:3px}.gram-lesson-no{display:grid;place-items:center;background:#2b4d4e;color:#a8eaca;border-radius:12px;width:44px;height:44px;flex:0 0 44px;font-weight:750;font-size:18px}.gram-lesson-desc{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1}.gram-lesson-desc strong{font-size:15px}.gram-lesson-desc small{font-size:12px;line-height:1.45;color:#b6c8d5}.gram-lesson-desc em{color:#92dcbd;font-style:normal;font-size:11px}.gram-chevron{font-size:30px;font-weight:300;color:#8fcfb8}.gram-future{border:1px dashed #3a556c;border-radius:17px;padding:21px;margin:25px 0 17px}.gram-future h3{font-size:18px;margin:8px 0}.gram-future p,.gram-small-note{font-size:12px;line-height:1.65;color:#a9becd}.gram-small-note{margin:14px 0 30px}
+.gram-back{color:#a3e5cb;background:transparent;border:0;padding:11px 0;text-align:left;font-size:14px;cursor:pointer;margin:8px 0 12px}.gram-lesson-title h1{font-family:Georgia,serif;font-weight:500;font-size:clamp(29px,7vw,38px);letter-spacing:-.5px;line-height:1.2;margin:9px 0}.gram-lesson-title p{color:#b5c7d0;font-size:14px;line-height:1.6;margin:0 0 18px}.gram-mini-track{display:flex;gap:6px;margin:0 0 23px}.gram-mini-track span{flex:1;border-radius:8px;height:5px;background:#2c4051}.gram-mini-track span.is-current{background:#79d7ae}
+.gram-prose{margin:15px 0 20px}.gram-prose p{font-size:14px;color:#d3e1e9;line-height:1.8;margin:9px 0}.gram-lab{border:1px solid #40586a;border-radius:20px;background:linear-gradient(180deg,#1a3042,#17293c);padding:20px 18px;margin:20px 0}.gram-lab-kicker{font-size:10px;letter-spacing:1.2px;color:#a5e8c6;font-weight:800}.gram-lab h3,.gram-task h3{font-size:19px;line-height:1.35;margin:13px 0 9px}.gram-tokenline,.gram-role-line{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;justify-content:center;padding:30px 4px 24px}.gram-token,.gram-role-token{border:1px solid #567389;border-radius:12px;padding:12px 13px;background:#253f53;color:#f2fbf8;font-weight:650;font-size:clamp(15px,3.8vw,19px);cursor:pointer;min-height:48px}.gram-token.chosen,.gram-role-token.chosen{border-color:#b1f5cf;box-shadow:0 0 0 2px #6ed8a851;background:#2d6050}.gram-punctuation{font-size:23px;align-self:center}.gram-inspection{background:#112536;border:1px solid #344e60;border-radius:13px;padding:15px;margin:0 0 2px;min-height:87px}.gram-inspection .gram-kicker{font-size:10px;letter-spacing:1.2px;color:#95e6bd;font-weight:800;text-transform:uppercase;display:block;margin-bottom:6px}.gram-inspection strong{font-size:18px}.gram-inspection p{font-size:13px;line-height:1.65;color:#c7d7e1;margin:7px 0 0}.gram-inspection>p{margin:3px 0;color:#9cb6c4}
+.gram-explanation{display:flex;gap:12px;align-items:flex-start;border-left:3px solid #87d9b3;background:#1c3541;border-radius:10px;padding:15px;margin:19px 0}.gram-lightbulb{color:#9ee5bd;font-size:25px;line-height:1}.gram-explanation strong{font-size:14px;color:#e0f5e9}.gram-explanation p{font-size:13px;line-height:1.68;color:#cadcde;margin:8px 0 0}.gram-role-token{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:72px;padding:12px 13px;line-height:1.3}.gram-role-token small{font-size:10px;font-weight:700;color:#d9e5df;text-align:center;line-height:1.35}.gram-minor-action{display:block;margin:-9px auto 17px;border:1px solid #50776e;border-radius:11px;color:#b0efcf;background:#284d4a;padding:11px 13px;font-size:12px;cursor:pointer}
+.role-subject{background:#263f58!important;border-color:#587da8!important}.role-predicate{background:#24504a!important;border-color:#5c9d84!important}.role-indirect{background:#4b405b!important;border-color:#9477b2!important}.role-direct{background:#514633!important;border-color:#9c8558!important}
+.gram-task{border:1px solid #3a5164;border-radius:17px;padding:18px;margin:23px 0;background:#15283a}.gram-task>p{font-size:13px;line-height:1.6;color:#bbd1d8}.gram-choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:16px 0 4px}.gram-choice{background:#23394e;color:#eaf5f4;border:1px solid #527086;border-radius:12px;padding:13px 8px;min-height:49px;cursor:pointer;font-size:13px;font-weight:650;overflow-wrap:anywhere}.gram-choice.selected{border-color:#98e4c4;background:#295248}.gram-feedback{padding:13px;border-radius:11px;font-size:13px!important;line-height:1.6;margin-top:14px!important}.gram-feedback.right{background:#21463e;color:#c3f3d9}.gram-feedback.try{background:#413a36;color:#f6d2b6}.gram-spanish-link{padding:18px;border:1px dashed #5a786d;border-radius:15px;background:#192f37;margin:20px 0 25px}.gram-spanish-link span{font-size:10px;letter-spacing:1px;font-weight:800;color:#aadfc6}.gram-spanish-link p{font-size:13px;color:#cfddd9;line-height:1.7;margin:9px 0 0}.gram-next-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:25px 0 35px}.gram-next-row button{font-size:12px;padding:12px 8px}
+.gram-hint{font-size:12px;color:#bfd3d9;line-height:1.6;margin:12px 0}.gram-build-zone,.gram-wordbank{display:flex;gap:9px;flex-wrap:wrap;align-items:stretch;border-radius:13px;padding:14px;min-height:77px}.gram-build-zone{border:1px dashed #6b9289;background:#112a31;margin:17px 0 12px}.gram-wordbank{background:#1e3547;border:1px solid #38576a;margin-bottom:15px}.gram-empty-slot{font-size:12px;color:#a4b9be;align-self:center}.gram-built,.gram-bank-chip{border:1px solid #657d80;color:#eff9f6;border-radius:11px;padding:10px 12px;font-size:15px;font-weight:750;background:#2f4a54;line-height:1.4}.gram-built{display:flex;flex-direction:column;gap:5px;align-items:flex-start;text-align:left;cursor:pointer;max-width:100%}.gram-built>span{display:inline;font-size:12px;margin-left:7px}.gram-built small{font-size:10px;font-weight:550;color:#d0e5e1}.gram-bank-chip{cursor:pointer;min-height:48px}.gram-toolbar{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:15px}.gram-compact-action{background:#2b544c;border:1px solid #699d8a;color:#e5fff1;border-radius:11px;font-size:13px;font-weight:700;padding:13px 8px;cursor:pointer;min-height:47px}.gram-compact-action.quiet{background:#25394b;border-color:#4b6981;color:#cbdfec}.gram-role-switch{display:flex;align-items:center;gap:10px;color:#cfe6db;font-size:12px;cursor:pointer;margin:18px 0 5px;line-height:1.5}.gram-role-switch input{accent-color:#85e3bd;width:19px;height:19px;flex:none}.gram-lab .gram-explanation{margin-bottom:0}.gram-give-task .secondary{margin:17px 0 10px}.gram-give-line{display:flex;gap:9px;flex-wrap:wrap;align-items:stretch;margin:16px 0}.gram-give-line .gram-built{cursor:default}
+@media(max-width:400px){.gram-lab{padding:16px 12px}.gram-choice-grid{gap:6px}.gram-choice{font-size:12px;padding:11px 5px}.gram-role-token{padding:11px 9px;min-height:65px}.gram-path-intro{padding:18px 14px;gap:12px}.gram-path-icon{width:42px;height:42px;flex-basis:42px}.gram-next-row button{font-size:11px}.gram-toolbar .gram-compact-action{font-size:12px}}
+@media(max-width:360px){.bottom-nav .nav small{font-size:9px}.bottom-nav .nav span{font-size:20px}.gram-tokenline,.gram-role-line{gap:6px}}
+
+.gram-all-used{font-size:12px;color:#a4e8c8;align-self:center;font-weight:650}
+
+/* 0.7a.1 – Two distinct pathways inside Learn */
+.learn-review-panel{border-color:#394d69;background:#16263b;margin-top:12px}
+.learn-review-panel .secondary{margin-top:13px}
+.learn-discover-launch{margin-top:18px}
+.discovery-finish{text-align:center;padding:22px 2px 7px}
+.discovery-finish h2{font-size:23px;line-height:1.3}
+.discovery-finish p{font-size:14px;color:#c2d7da;line-height:1.65;margin-bottom:20px}
+.discovery-finish .secondary{margin-top:10px}
+
+/* 0.7a.2 · Palabra Grammar A1: quiet, interactive reading + building */
+.gram-a1-launch{width:100%;background:linear-gradient(125deg,#264d47,#18383e);border:1px solid #6aa891;border-radius:21px;display:flex;text-align:left;gap:16px;align-items:center;color:#effff5;padding:20px 17px;margin:10px 0 24px;cursor:pointer}
+.gram-a1-launch:focus-visible,.a1-module-card:focus-visible,.a1-section button:focus-visible,.a1-lab-switch button:focus-visible{outline:3px solid #a9eed0;outline-offset:3px}
+.gram-a1-mark{display:grid;place-items:center;flex:none;width:60px;height:60px;border-radius:16px;background:#366f5e;color:#e5fff2;font-size:22px;font-weight:800}
+.gram-a1-launch>span:last-child{display:flex;flex-direction:column;gap:6px;min-width:0}.gram-a1-launch strong{font-size:17px;line-height:1.3}.gram-a1-launch small{font-size:12px;color:#c6e0d8;line-height:1.5}.gram-a1-launch em{font-style:normal;color:#b0f7ce;font-size:12px;font-weight:750}
+.a1-count{display:flex;align-items:center;gap:15px;padding:20px 17px;border:1px solid #43685d;background:#18352f;border-radius:18px;margin:8px 0 12px}.a1-count>strong{font-size:30px;font-variant-numeric:tabular-nums;color:#b7f2d0;white-space:nowrap}.a1-count>strong span{color:#9eb8b6;font-size:16px}.a1-count b{font-size:13px}.a1-count p{font-size:11px;color:#b5ceca;line-height:1.55;margin:6px 0 0}.a1-progress{height:7px;border-radius:20px;overflow:hidden;background:#284252;margin:0 0 28px}.a1-progress span{display:block;height:100%;background:#8ed7b2;border-radius:20px;transition:width .2s}
+.a1-module-list{display:grid;gap:9px}.a1-module-card{display:flex;width:100%;align-items:center;text-align:left;gap:13px;border:1px solid #385469;background:#162a3b;color:#ecf9f5;border-radius:17px;padding:15px 11px;cursor:pointer}
+.a1-module-number{display:grid;place-items:center;width:43px;height:48px;flex:none;background:#2b4c50;border-radius:11px;color:#a7ebcb;font-weight:800;font-size:16px}.a1-module-description{display:flex;flex:1;flex-direction:column;gap:5px;min-width:0}.a1-module-description strong{font-size:14px;line-height:1.3}.a1-module-description small{color:#bfd1d9;font-size:12px;line-height:1.35}.a1-module-description em{color:#a6e1c4;font-style:normal;font-size:11px}
+.a1-lab{border-radius:20px;border:1px solid #4b7267;background:linear-gradient(180deg,#1d3e40,#172e3c);padding:19px 17px;margin:19px 0 26px}.a1-small{color:#d0dfe0;font-size:13px;line-height:1.65;margin:9px 0 15px}.a1-lab-switch{display:grid;grid-template-columns:1fr 1fr;gap:9px}.a1-lab-switch button{border:1px solid #58766f;border-radius:12px;background:#234147;color:#c9ddd6;min-height:45px;cursor:pointer;font-size:13px;font-weight:650}.a1-lab-switch button.chosen{background:#3c755c;border-color:#b3efce;color:#fff}.a1-lab-example{background:#112c37;border:1px solid #37596a;border-radius:14px;margin-top:12px;padding:19px 14px;display:flex;flex-direction:column;gap:9px}.a1-lab-example strong{font-family:Georgia,'Times New Roman',serif;font-size:clamp(22px,5vw,28px);font-weight:500}.a1-lab-example span{font-size:14px;color:#e0ede8}.a1-lab-example small{font-size:12px;line-height:1.5;color:#aedbc9}.a1-mod-meta{font-size:12px;color:#a9c7bf;margin:2px 0}.a1-lab-foot{margin:24px 0 30px;color:#a9bdc5;line-height:1.6;font-size:12px}
+.a1-section{border:1px solid #375168;background:#172c3e;border-radius:19px;padding:20px 18px;margin:18px 0 22px}.a1-section h2{font-size:20px;line-height:1.35;margin:11px 0 12px;color:#f0f7f6}.a1-section>p{font-size:14px;color:#c7d9df;line-height:1.75}.a1-model{background:#10293b;border-radius:13px;border:1px solid #436474;padding:19px 14px;display:flex;flex-direction:column;gap:8px;margin:15px 0 8px}.a1-model strong{font-family:Georgia,'Times New Roman',serif;font-size:clamp(21px,5vw,26px);font-weight:500;line-height:1.4}.a1-model span{color:#bad3da;font-size:13px;line-height:1.5}.a1-model-toggle,.a1-light-action{cursor:pointer;background:transparent;border:1px solid #5c7b73;border-radius:10px;padding:10px 13px;color:#b7eccd;font-size:12px;font-weight:650}.a1-section .gram-explanation{margin-top:18px}.a1-remember{font-size:12px;line-height:1.7;background:#263c47;border-left:2px solid #93b5c8;padding:12px;margin-top:15px;color:#d6e3e6;border-radius:8px}
+.a1-choices{display:grid;gap:9px;margin:15px 0}.a1-choices button{min-height:46px;text-align:left;cursor:pointer;border:1px solid #52718a;background:#253e53;border-radius:12px;padding:11px 14px;color:#e7f3f3;font-weight:650;font-size:14px;overflow-wrap:anywhere}.a1-choices button.selected{background:#28574a;border-color:#a7ebca}.a1-build-zone{margin-bottom:9px;min-height:70px;align-items:center}.a1-bank{min-height:75px}.a1-bank .gram-bank-chip{background:#344d60}.a1-prompt{font-size:14px;color:#e4f2ef;line-height:1.7;display:block;margin:12px 0}.a1-answer{width:100%;min-height:47px;box-sizing:border-box;border:1px solid #5d7c89;border-radius:11px;background:#102739;color:#fff;font-size:16px;padding:13px 12px;outline:none}.a1-answer:focus-visible{border-color:#aae6c8;box-shadow:0 0 0 2px #80d8a440}.a1-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}.a1-actions button{font-size:12px;padding:11px 8px}.a1-solution{border:1px solid #42665a;border-radius:13px;background:#183c34;margin-top:14px;padding:13px}.a1-solution strong{font-size:13px}.a1-solution p{font-size:16px;margin:9px 0;color:#e4fff1}.a1-solution small{color:#bbd9cb;line-height:1.5}.a1-lesson-end{margin:23px 0 38px;border:1px solid #3b5569;border-radius:15px;padding:16px;background:#17283b;font-size:12px;color:#bbced7;line-height:1.65}.a1-done{font-weight:750;color:#a3efc2}.a1-next-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:15px}.a1-next-actions button{font-size:12px;padding:12px 8px}
+@media(max-width:390px){.gram-a1-launch{padding:16px 12px;gap:12px}.gram-a1-mark{width:49px;height:49px;font-size:19px}.gram-a1-launch strong{font-size:15px}.a1-section{padding:16px 12px}.a1-count{padding:16px 12px}.a1-module-card{padding:13px 10px}.a1-lesson-end{padding:13px}}
+
+/* 0.7a.3 – extra story shelf covers; preserve existing Coco / Cine artwork. */
+.story-cover-llave-azul{background:linear-gradient(145deg,#284a62,#618eac 57%,#bbd2c2);color:#fff}
+.story-cover-puesto-siete{background:linear-gradient(145deg,#613c29,#b08053 53%,#e1bb86);color:#fff}
+.story-cover-mensaje-617{background:linear-gradient(145deg,#253b53,#637b9b 53%,#a6adb4);color:#fff}
+.story-cover-kilometro-42{background:linear-gradient(145deg,#304a42,#71917b 55%,#c4c58f);color:#fff}
+.story-cover-la-casa-miercoles{background:linear-gradient(145deg,#5f4146,#9c7776 54%,#c5a49c);color:#fff}
+.story-cover-las-voces-que-faltan{background:linear-gradient(145deg,#343753,#6c6889 54%,#a7a0bb);color:#fff}
+
+/* Palabra 0.7a.4 – schlichte, textfreie Buchillustrationen. Titel und Metadaten bleiben außerhalb des Bilds. */
+.story-cover{flex:0 0 108px;align-self:flex-start;aspect-ratio:5/7;min-height:0;padding:0;overflow:hidden;display:block;line-height:0;background:#294052;box-shadow:2px 5px 14px #07111e66}
+.story-cover img{display:block;width:100%;height:100%;object-fit:cover;object-position:center;border:0}
+@media(max-width:390px){.story-cover{flex-basis:82px;min-height:0}}

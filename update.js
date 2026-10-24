@@ -1,6 +1,6 @@
-/* Palabra 0.6a.5 – retire old offline cache, preserve localStorage. */
+/* Palabra 0.7a.4 – retire old offline cache, preserve localStorage. */
 (function () {
-  const VERSION = '06a5';
+  const VERSION = '07a4'; // asset/cache build only; localStorage data format stays v1
   async function cleanOldAppCaches() {
     if ('serviceWorker' in navigator) {
       const registrations = await navigator.serviceWorker.getRegistrations();
@@ -24,7 +24,7 @@
     url.searchParams.set('reload', String(Date.now()));
     location.replace(url.href);
   }
-  // Clean up on every 0.6a.5 load. Never clear localStorage or IndexedDB.
+  // Clean up on every 0.7a.4 load. Never clear localStorage or IndexedDB.
   cleanOldAppCaches().catch(() => {});
   document.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('refreshVersionBtn');
