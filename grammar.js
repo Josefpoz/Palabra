@@ -1,7 +1,7 @@
 /* Palabra Grammar · Satzwerkstatt 0.6a.8g1 – read-only prototype, no SRS mutations. */
 window.PalabraGrammar = (() => {
  'use strict';
- let active = null;
+ let active = null, workshopOpen=false;
  const root = () => document.getElementById('grammarArea');
  const lessons = [
   {id:'wortarten',number:'01',title:'Wörter haben Aufgaben',meta:'Nomen, Verben, Adjektive und Artikel',time:'5 Minuten'},
@@ -25,17 +25,23 @@ window.PalabraGrammar = (() => {
   {text:'ein Buch.',type:'Direktes Objekt',question:'Was schenkt sie?',detail:'Ein Buch ist das Geschenk. Diese Wortgruppe ist das direkte Objekt im Akkusativ.',color:'direct'}
  ];
  const safe = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- function render(){if(!root())return; if(window.PalabraGrammarA1?.isActive()){window.PalabraGrammarA1.render();return} active?renderLesson():renderIndex()}
+ function render(){if(!root())return; if(window.PalabraPronunciation?.isActive()){window.PalabraPronunciation.render();return} if(window.PalabraGrammarA1?.isActive()){window.PalabraGrammarA1.render();return} active?renderLesson():workshopOpen?renderWorkshop():renderIndex()}
  function resetLesson(id){active=id;wordSelection=null;wordAnswer=null;rolesSelection=null;rolesAnswer=null;rolesVisible=false;builderRoles=true;swapped=false;giverSwapped=false;built=[];builderFeedback='';render();}
  function renderIndex(){
-  root().innerHTML=`<div class="gram-hero"><span class="eyebrow">PALABRA GRAMMAR · ERSTER ENTWURF</span><h1>Sprache hat ein System.</h1><p>Entdecke, wie Sätze funktionieren. Verstehen statt Regeln auswendig lernen.</p></div>
-  <button type="button" class="gram-a1-launch" data-gram-a1><span class="gram-a1-mark">A1</span><span><strong>Spanisch A1 · Der Grammatikkurs</strong><small>16 Module · 48 Lektionen · Entdecken, verstehen, ausprobieren</small><em>Zum A1-Kurs →</em></span></button>
-  <div class="gram-path-intro"><div class="gram-path-icon" aria-hidden="true">✳</div><div><span class="eyebrow">DEIN EINSTIEG</span><h2>Die Satzwerkstatt</h2><p>Grammatik ausprobieren, Satzbausteine tauschen und dabei die Fachbegriffe ganz nebenbei kennenlernen. Alles auf Deutsch – als Fundament für Spanisch.</p></div></div>
-  <div class="gram-unit-heading"><h2>Unsere drei Probelektionen</h2><span class="gram-subtle">Frei zugänglich</span></div>
-  <div class="gram-lesson-list">${lessons.map(l=>`<button type="button" class="gram-lesson-card" data-gram-open="${l.id}"><span class="gram-lesson-no">${l.number}</span><span class="gram-lesson-desc"><strong>${l.title}</strong><small>${l.meta}</small><em>${l.time} · Experimente</em></span><span class="gram-chevron" aria-hidden="true">›</span></button>`).join('')}</div>
-  <div class="gram-future"><span class="eyebrow">DEIN LERNWEG</span><h3>Spanisch verstehen und anwenden</h3><p>Nach der Satzwerkstatt kannst du im A1-Kurs deine Kenntnisse auf Spanisch übertragen. Spätere Vertiefungen zu <i>se</i>, <i>por/para</i> und dem Subjuntivo bleiben in Planung.</p></div>
-  <p class="gram-small-note">Diese Werkstatt ist freiwillig. Du kannst jederzeit zu anderen Bereichen zurückkehren. Die Experimente verändern weder Lernkarten noch SRS oder deinen Fortschritt.</p>`;
+  root().innerHTML=`<div class="gram-hero"><span class="eyebrow">PALABRA GRAMMAR</span><h1>Sprache verbindet.</h1><p>Entdecke die Bausteine hinter deinen Sätzen.</p></div>
+  <div class="gram-unit-heading"><h2>Dein Einstieg</h2></div>
+  <button type="button" class="gram-a1-launch" data-gram-workshop><span class="gram-a1-mark">◈</span><span><strong>Satzwerkstatt</strong><small>Deutsch und Spanisch gemeinsam verstehen</small><em>Entdecken →</em></span></button>
+  <div class="gram-unit-heading gram-collections-heading"><h2>Weiterlernen</h2></div>
+  <button type="button" class="gram-a1-launch" data-gram-a1><span class="gram-a1-mark">A1</span><span><strong>Spanisch A1</strong><small>Klanglabor und Grammatik Schritt für Schritt</small><em>Zum Kurs →</em></span></button>`;
  }
+ function renderWorkshop(){root().innerHTML=`<button class="gram-back" type="button" data-gram-workshop-back>← Zur Grammar-Übersicht</button><div class="gram-hero"><span class="eyebrow">SATZWERKSTATT</span><h1>Grammatik verbindet Sprachen.</h1><p>Was funktioniert in beiden Sprachen ähnlich – und wo gibt es Unterschiede?</p></div>
+  <div class="gram-bridge-card"><div class="gram-bridge-heading"><span class="eyebrow">EINE IDEE · ZWEI SPRACHEN</span><button type="button" class="palabra-context-help" data-help-toggle="gramBridgeHelp" aria-expanded="false" aria-label="Was bedeuten die Farben?">?</button></div>
+   <div class="gram-bridge-language"><span>DEUTSCH</span><div class="gram-bridge-words"><button data-bridge-role="subject" type="button" class="role-subject">Der Junge</button><button data-bridge-role="predicate" type="button" class="role-predicate">liest</button><button data-bridge-role="direct" type="button" class="role-direct">ein Buch.</button></div></div>
+   <div class="gram-bridge-language"><span>ESPAÑOL</span><div class="gram-bridge-words"><button data-bridge-role="subject" type="button" class="role-subject" lang="es">El niño</button><button data-bridge-role="predicate" type="button" class="role-predicate" lang="es">lee</button><button data-bridge-role="direct" type="button" class="role-direct" lang="es">un libro.</button></div></div>
+   <p class="gram-bridge-discovery" id="gramBridgeDiscovery" role="status">Tippe auf einen farbigen Baustein – in beiden Sprachen!</p>
+   <div id="gramBridgeHelp" class="palabra-help-content" hidden>Die Farben zeigen echte Satzrollen: Subjekt, Prädikat und direktes Objekt. Gleiche Bedeutung heißt nicht immer gleiche Satzstruktur – wir vergleichen sorgfältig.</div>
+  </div>
+  <div class="gram-unit-heading"><h2>Die drei Experimente</h2><span class="gram-subtle">In deinem Tempo</span></div><div class="gram-lesson-list">${lessons.map(l=>`<button type="button" class="gram-lesson-card" data-gram-open="${l.id}"><span class="gram-lesson-no">${l.number}</span><span class="gram-lesson-desc"><strong>${l.title}</strong><small>${l.meta}</small></span><span class="gram-chevron" aria-hidden="true">›</span></button>`).join('')}</div>`;}
  function renderLesson(){const l=lessons.find(x=>x.id===active);if(!l){active=null;return renderIndex()}
   root().innerHTML=`<button class="gram-back" type="button" id="gramBack">← Zur Satzwerkstatt</button><div class="gram-lesson-title"><span class="eyebrow">SATZWERKSTATT · LEKTION ${l.number} / 03</span><h1>${l.title}</h1><p>${l.meta}</p></div>
   <div class="gram-mini-track" role="img" aria-label="Lektion ${Number(l.number)} von drei">${lessons.map((x,i)=>`<span class="${i<=lessons.indexOf(l)?'is-current':''}"></span>`).join('')}</div>
@@ -73,11 +79,15 @@ window.PalabraGrammar = (() => {
   <div class="gram-spanish-link"><span>UND SPÄTER AUF SPANISCH?</span><p><em>La mujer le da un libro al hombre.</em> Hier steckt dieselbe Idee dahinter: Eine Person gibt etwas an eine andere. Das spanische <em>le</em> hilft uns, den Empfänger wiederzuerkennen.</p></div>`;}
  function onClick(e){
   const btn=e.target.closest('button'); if(!btn||!root().contains(btn))return;
+  if(btn.hasAttribute('data-gram-workshop')){workshopOpen=true;active=null;render();return}
+  if(btn.hasAttribute('data-gram-workshop-back')){workshopOpen=false;active=null;render();return}
+  if(btn.hasAttribute('data-gram-pronounce')){active=null;window.PalabraGrammarA1?.exit();window.PalabraPronunciation?.open();return}
+  if(btn.hasAttribute('data-bridge-role')){const role=btn.dataset.bridgeRole,terms={subject:'SUBJEKT · Der Junge / El niño: Wer liest? Das Subjekt nennt hier die handelnde Person. Im Deutschen steht es im Nominativ.',predicate:'PRÄDIKAT · liest / lee: Was tut der Junge? Das konjugierte Verb bildet hier das Prädikat.',direct:'DIREKTES OBJEKT · ein Buch / un libro: Was liest er? Beide Wortgruppen sind das direkte Objekt; im Deutschen steht es hier im Akkusativ.'};root().querySelectorAll('[data-bridge-role]').forEach(el=>{const selected=el.dataset.bridgeRole===role;el.classList.toggle('is-emphasized',selected);el.setAttribute('aria-pressed',String(selected))});root().querySelector('#gramBridgeDiscovery').textContent=terms[role]||'';return}
   if(btn.hasAttribute('data-gram-a1')){active=null;window.PalabraGrammarA1.open();return}
   const open=btn.getAttribute('data-gram-open');if(open){resetLesson(open);return}
-  if(btn.id==='gramBack'){active=null;render();return}
-  if(btn.id==='gramPrevious'){const i=lessons.findIndex(x=>x.id===active);i>0?resetLesson(lessons[i-1].id):(active=null,render());return}
-  if(btn.id==='gramNext'){const i=lessons.findIndex(x=>x.id===active);i<lessons.length-1?resetLesson(lessons[i+1].id):(active=null,render());return}
+  if(btn.id==='gramBack'){active=null;workshopOpen=true;render();return}
+  if(btn.id==='gramPrevious'){const i=lessons.findIndex(x=>x.id===active);i>0?resetLesson(lessons[i-1].id):(active=null,workshopOpen=true,render());return}
+  if(btn.id==='gramNext'){const i=lessons.findIndex(x=>x.id===active);i<lessons.length-1?resetLesson(lessons[i+1].id):(active=null,workshopOpen=true,render());return}
   if(btn.hasAttribute('data-gram-word')){wordSelection=Number(btn.getAttribute('data-gram-word'));render();return}
   if(btn.hasAttribute('data-gram-word-answer')){wordAnswer=btn.getAttribute('data-gram-word-answer');render();return}
   if(btn.hasAttribute('data-gram-role')){rolesSelection=Number(btn.getAttribute('data-gram-role'));render();return}

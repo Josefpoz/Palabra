@@ -548,3 +548,141 @@ button.pillar-card:focus-visible {outline:3px solid #83dbc1;outline-offset:3px;}
 .story-cover{flex:0 0 108px;align-self:flex-start;aspect-ratio:5/7;min-height:0;padding:0;overflow:hidden;display:block;line-height:0;background:#294052;box-shadow:2px 5px 14px #07111e66}
 .story-cover img{display:block;width:100%;height:100%;object-fit:cover;object-position:center;border:0}
 @media(max-width:390px){.story-cover{flex-basis:82px;min-height:0}}
+
+/* Palabra 0.7a.5 – Wort-Audio: ruhige, nur auf Wunsch aktive Wiedergabe */
+.palabra-audio-controls{display:inline-flex;align-items:center;flex-wrap:wrap;gap:6px;margin:8px 0 11px;max-width:100%}
+.palabra-audio-button{font:600 12px/1.25 system-ui,-apple-system,sans-serif;min-height:40px;border:1px solid #486a70;border-radius:11px;background:#244b4b;color:#dbf2e6;cursor:pointer;padding:9px 12px;display:inline-flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap}
+.palabra-audio-button.audio-slow{background:transparent;border-color:#526575;color:#d0dce3;min-width:49px}
+.palabra-audio-button:hover,.palabra-audio-button:focus-visible,.palabra-audio-button.audio-playing{border-color:#8cdec0;background:#356c61;color:#fff;outline-offset:2px}
+.palabra-audio-controls.audio-compact{margin:4px 0 6px;gap:4px}
+.audio-compact .palabra-audio-button{padding:6px 9px;min-height:34px;font-size:11px}
+.audio-compact .palabra-audio-button:not(.audio-slow) span{display:none}
+.story-vocab-paper>.palabra-audio-controls{justify-content:center;display:flex;margin:8px auto 14px}
+.story-panel-audio{display:flex;flex-direction:column;align-items:flex-start;gap:3px;margin:2px 0 11px}
+.story-panel-audio>.palabra-audio-controls{margin:2px 0}
+.story-lemma-audio{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:#b2cbd0}
+.story-lemma-audio .palabra-audio-controls{margin:0}
+.learn-browse-panel>.palabra-audio-controls{display:flex;justify-content:center;margin:4px auto 17px}
+.flashcard .palabra-audio-controls{display:flex;justify-content:center}
+.word-row-top{flex-wrap:wrap;gap:4px}
+.word-row-top .palabra-audio-controls{margin:0 4px;vertical-align:middle}
+.collection-word-row .palabra-audio-controls{margin:0 5px;vertical-align:middle}
+@media(max-width:390px){.story-panel-audio .palabra-audio-button{min-height:40px}.story-lemma-audio{gap:5px}}
+
+.palabra-audio-notice{position:fixed;z-index:201;left:50%;transform:translateX(-50%);bottom:calc(82px + env(safe-area-inset-bottom));background:#213a4a;border:1px solid #769798;color:#f0f7f3;padding:12px 15px;border-radius:12px;font-size:13px;max-width:min(94vw,420px);box-shadow:0 12px 24px #06162699}
+.palabra-audio-notice[hidden]{display:none}
+
+
+/* 0.7a.8-P1 · Calm, readable, warm, scoped design language */
+.pillar-icon svg{width:29px;height:29px;display:block}
+.bottom-nav .nav svg{width:23px;height:23px;display:block;margin:auto}
+.pillar-card{min-height:116px;gap:17px;padding:18px;border-radius:20px}
+.pillar-description small{font-size:15px;line-height:1.5}
+.pillar-link{font-size:14px}
+.pillar-footnote{font-size:14px}
+.learn-daily-panel>p.muted{font-size:15px;line-height:1.55}
+.learn-choice-intro{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:27px 2px 12px}
+.learn-choice-intro h2{margin:0;flex:1}
+.palabra-context-help{width:36px;height:36px;flex:0 0 36px;display:grid;place-items:center;border-radius:50%;background:#233a49;border:1px solid #4d6e79;color:#d4e7e9;font-size:17px;font-weight:800;cursor:pointer}
+.palabra-context-help:focus-visible,.discovery-option:focus-visible,.gram-bridge-words button:focus-visible,.pron-topic-card:focus-visible{outline:3px solid #9be7cc;outline-offset:3px}
+.palabra-help-content{width:100%;color:#d4e6e9;background:#1c3141;border:1px solid #3a5467;border-radius:13px;padding:15px 16px;font-size:15px;line-height:1.65}
+.palabra-help-content[hidden]{display:none}
+.learn-deck-card,.learn-pack-card,.learn-review-link{min-height:85px;background:#17293b;border-color:#344b60}
+.learn-item-content strong{font-size:17px}
+.learn-item-content small{font-size:14px;line-height:1.5}
+.learn-deck-number,.learn-pack-number{position:relative;border-radius:14px;overflow:hidden;background:#29433f;font-size:20px}
+.learn-deck-number::after,.learn-pack-number::after{content:"";position:absolute;inset:5px;border:1px solid #b0dbcb33;border-radius:9px;pointer-events:none}
+.learn-deck-card:nth-child(2n) .learn-deck-number{background:#394155;color:#e1d9ed}
+.learn-deck-card:nth-child(3n) .learn-deck-number{background:#514337;color:#f0d5b1}
+.learn-deck-card:nth-child(4n) .learn-deck-number{background:#2b4856;color:#b7dce8}
+.learn-review-link>span:nth-child(2) strong{font-size:16px}
+.learn-review-link>span:nth-child(2) small{font-size:14px}
+.learn-step-heading p{font-size:15px}
+@media(max-width:390px){.learn-item-content strong{font-size:16px}.learn-item-content small{font-size:14px}.learn-deck-number,.learn-pack-number{width:43px;height:43px;flex-basis:43px}.pillar-card{min-height:105px}.pillar-description small{font-size:14px}}
+.discovery-question{font-size:17px;color:#deede9;text-align:center;font-weight:600;margin:22px 0 14px}
+.discovery-options{display:grid;grid-template-columns:1fr;gap:10px;margin:17px 0}
+.discovery-option{appearance:none;background:#213449;color:#e8f3f3;border:1px solid #486277;display:flex;align-items:center;gap:13px;text-align:left;border-radius:14px;padding:14px;min-height:60px;width:100%;font-size:16px;font-weight:590;line-height:1.4;cursor:pointer}
+.discovery-option-letter{width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;border:1px solid #658294;border-radius:10px;color:#cadce7;font-size:14px;font-weight:750}
+.discovery-option.is-correct{background:#24473e;border-color:#92dcb5;color:#e9fff3}
+.discovery-option.is-wrong{background:#483a3a;border-color:#b78e85}
+.discovery-option:disabled{cursor:default;opacity:1}
+.discovery-feedback{background:#203c3b;border:1px solid #527a72;padding:16px;border-radius:14px;margin:15px 0;color:#f0f9f6}
+.discovery-feedback.is-try{background:#3b3435;border-color:#7b6660}
+.discovery-feedback strong{font-size:17px}
+.discovery-feedback p{font-size:15px;margin:7px 0 0;line-height:1.6}
+#browseContent .footnote{font-size:14px;line-height:1.6}
+#browseContent .palabra-audio-controls{justify-content:center}
+.gram-hero p{font-size:17px}
+.gram-unit-heading h2{font-size:21px}
+.gram-lesson-desc strong{font-size:17px}
+.gram-lesson-desc small{font-size:14px}
+.gram-collections-heading{margin-top:27px}
+.gram-a1-launch{margin:10px 0 12px;padding:16px;border-color:#496a68;background:linear-gradient(130deg,#233e43,#19303d)}
+.gram-a1-launch strong{font-size:18px}
+.gram-a1-launch small{font-size:14px}
+.gram-a1-launch em{font-size:14px}
+.gram-sound-launch{background:#1c3143;border-color:#455d72}
+.gram-sound-launch .gram-a1-mark{background:#31435a}
+.gram-bridge-card{border:1px solid #446474;border-radius:20px;padding:19px 17px;margin:12px 0 26px;background:linear-gradient(160deg,#1c3344,#1a2d3d)}
+.gram-bridge-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.gram-bridge-language{padding:15px 0;border-bottom:1px solid #354e60}
+.gram-bridge-language>span{font-size:12px;color:#bed6d4;font-weight:750;letter-spacing:.08em}
+.gram-bridge-words{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.gram-bridge-words button{font-size:clamp(15px,4.1vw,20px);line-height:1.45;padding:9px 11px;color:#eef6f6;border-radius:10px;border:1px solid transparent;cursor:pointer;transition:box-shadow .15s}
+.gram-bridge-words button.is-emphasized{box-shadow:0 0 0 2px #f0faf4;border-color:#fff!important}
+.gram-bridge-discovery{color:#cae3de;line-height:1.55;font-size:15px;margin:16px 0 0;min-height:24px}
+.pron-begin-note,.pron-takeaway{background:#193742;border:1px solid #375e67;border-radius:14px;padding:15px;color:#c9e4dd;font-size:15px;line-height:1.6;margin:11px 0 19px}
+.pron-topic-list{display:grid;gap:10px;margin-bottom:27px}
+.pron-topic-card{display:flex;align-items:center;gap:14px;width:100%;min-height:81px;background:#172c3f;border:1px solid #3f576b;border-radius:16px;padding:14px;color:#f1f8f8;text-align:left;cursor:pointer}
+.pron-topic-number{width:43px;height:43px;display:grid;place-items:center;flex:0 0 43px;border-radius:12px;background:#2b4945;color:#c6e9d7;font-weight:800}
+.pron-topic-text{display:flex;flex-direction:column;gap:4px;flex:1}
+.pron-topic-text strong{font-size:17px}
+.pron-topic-text small{color:#bdd1d5;font-size:14px}
+.pron-explanation p{font-size:16px;line-height:1.76;color:#e1eded}
+.pron-audio-list{display:grid;gap:10px;margin:20px 0}
+.pron-audio-item{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:11px;background:#1a3040;border:1px solid #3c556a;border-radius:14px;padding:16px}
+.pron-audio-item>div:first-child{display:flex;flex-direction:column;gap:5px;min-width:150px;flex:1}
+.pron-audio-item strong{font-size:21px;color:#f4fbfb}
+.pron-audio-item span{font-size:15px;color:#d0dfd9}
+.pron-audio-item small{font-size:14px;color:#aabfc6;line-height:1.4}
+.pron-audio-missing{font-size:13px;color:#c6bbac;border:1px dashed #685e53;border-radius:9px;padding:8px}
+.pron-takeaway strong{font-size:16px}
+.pron-takeaway p{margin:5px 0 0}
+.pron-answers{display:grid;gap:9px;margin-top:15px}
+.pron-answers button{appearance:none;width:100%;min-height:49px;background:#223e50;border:1px solid #42667b;color:#eff6f7;border-radius:12px;text-align:left;padding:12px;font-size:15px;cursor:pointer}
+.pron-answers button.is-correct{background:#245343;border-color:#7acb9f}
+.pron-answers button.is-wrong{background:#4a3939;border-color:#a37c75}
+.pron-answers button:disabled{cursor:default;opacity:1}
+@media(max-width:400px){.pron-audio-item{display:block}.pron-audio-control{margin-top:12px}.gram-bridge-card{padding:16px 12px}.gram-bridge-words{gap:5px}.gram-bridge-words button{padding:8px}}
+/* Small contextual help sits beside headings rather than expanding menus. */
+.learn-daily-panel>.palabra-context-help{margin:0 0 6px auto;width:34px;height:34px}
+#learnDiscoveryHelp{margin:0 0 13px}
+.browse-navigation .primary,.browse-navigation .secondary{font-size:15px}
+@media(max-width:390px){.browse-navigation .primary,.browse-navigation .secondary{font-size:14px}}
+
+/* 0.7a.8 P2 – calm audio dialogue controls + comparison cards */
+.dialogue-playback{display:flex;gap:.7rem;flex-wrap:wrap;align-items:center;margin:1rem 0 1.25rem;padding:.7rem 0}
+.dialogue-playback button{min-height:44px;font-size:1rem}
+.chat-line{transition:background .2s,border .2s}
+.chat-line.is-speaking .chat-bubble{outline:2px solid var(--accent,#789c88);outline-offset:3px}
+.chat-play-turn{display:inline-flex;align-items:center;justify-content:center;align-self:flex-start;margin-top:.35rem;border:1px solid var(--line,#d9ded9);border-radius:100px;padding:.52rem .85rem;background:transparent;color:inherit;font-size:.9rem;cursor:pointer;min-height:42px}
+.chat-play-turn.audio-playing,.dialogue-playback button.audio-playing{box-shadow:0 0 0 2px rgba(104,149,122,.5)}
+.palabra-grammar-audio-controls{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.55rem}
+.pron-compare-intro{margin:1rem 0 .7rem}.pron-compare-intro p{margin:.35rem 0;color:var(--muted,#666);font-size:1rem}
+.pron-compare-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.85rem;margin:1rem 0 1.5rem}
+.pron-compare-card{background:var(--card,#f7f8f5);border:1px solid var(--line,#ddd);border-radius:16px;padding:1.1rem;display:flex;flex-direction:column;gap:.45rem;min-width:0}
+.pron-compare-card>strong{font-size:clamp(1.25rem,3vw,1.7rem);overflow-wrap:anywhere}
+.pron-compare-card>span{font-size:1rem}.pron-compare-card>small{font-size:.91rem;line-height:1.5;color:var(--muted,#666)}
+.pron-compare-card .pron-audio-control{margin-top:auto;padding-top:.3rem}.pron-compare-card .palabra-audio-controls{display:flex;flex-wrap:wrap;gap:.5rem}
+.pron-compare-card .palabra-audio-button{min-height:42px}
+.pron-special-note{border-left:3px solid #8ea797;background:rgba(124,160,137,.08);border-radius:8px;padding:1rem;line-height:1.6;margin-top:.5rem}
+@media(max-width:410px){.pron-compare-grid{gap:.55rem}.pron-compare-card{padding:.85rem}.pron-compare-card .palabra-audio-button{font-size:.83rem;padding:.45rem}}
+
+/* dark-mode accessibility correction for comparison cards */
+.pron-compare-card{background:#1a3040;border-color:#3c556a;color:#f0f5fc}
+.pron-compare-card>strong{color:#f1faf7}
+.pron-compare-card>span{color:#d0dfd9}
+.pron-compare-card>small{color:#b6c9d1}
+.pron-compare-intro p{color:#b6c9d1}
+.pron-compare-card .palabra-audio-controls{min-width:0}
+.pron-compare-card button{max-width:100%}

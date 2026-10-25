@@ -120,6 +120,7 @@ function candidates(dir=selectedDirection){
  return due;
 }
 let learnScreen='overview',browseCards=[],browseIndex=0,browseRevealed=false,browseMode='browse',browseDeck='',browsePack='';
+let discoveryChoice=null,discoveryOptions=[]; // transient MC state; never persisted or graded as SRS
 function packageWords(deck,pack){return data.words.filter(w=>deckOf(w)===deck&&String(w.package)===String(pack)).sort((a,b)=>Number(a.learning_order)-Number(b.learning_order))}
 function discoveryKey(deck,pack){return `${deck}:${pack}`}
 function discoveryRecord(deck,pack){return data.discovery.packages[discoveryKey(deck,pack)]||null}
@@ -137,7 +138,7 @@ function openPackageBrowse(){
  if(!canBrowsePackage(selectedDeck,selectedPackage))return;
  browseMode='browse';browseDeck=selectedDeck;browsePack=selectedPackage;
  browseCards=packageWords(browseDeck,browsePack);
- browseIndex=0;browseRevealed=false;showLearnScreen('browse');renderPackageBrowse();
+ browseIndex=0;browseRevealed=false;discoveryChoice=null;discoveryOptions=[];showLearnScreen('browse');renderPackageBrowse();
 }
 function openDiscovery(deck=selectedDeck,pack=selectedPackage){
  if(!/^palabra-basis-[1-5]$/.test(deck)||!/^[0-9]+$/.test(String(pack)))return;
@@ -149,7 +150,41 @@ function openDiscovery(deck=selectedDeck,pack=selectedPackage){
  browseCards=packageWords(deck,pack);if(!browseCards.length)return;
  const existing=discoveryRecord(deck,pack);
  browseIndex=Math.min(browseCards.length-1,Math.max(0,existing?.lastIndex||0));
- browseRevealed=false;showLearnScreen('browse');renderPackageBrowse();
+ browseRevealed=false;discoveryChoice=null;discoveryOptions=[];showLearnScreen('browse');renderPackageBrowse();
+}
+// Discovery game: distractors must be distinct in meaning; do not offer a second
+// recognized gloss as an incorrect answer. Try same POS, then the wider deck.
+function discoveryGloss(value){return String(value||'').normalize('NFC').toLocaleLowerCase('de').replace(/\([^)]*\)/g,' ').replace(/[.,;!?]/g,' ').replace(/\s+/g,' ').trim()}
+function discoveryMeanings(value){
+ const full=discoveryGloss(value),split=String(value||'').split(/\s*[\/;,|]\s*/).map(discoveryGloss).filter(Boolean);
+ return new Set([full,...split]);
+}
+function discoveryChoices(w){
+ const correct=discoveryGloss(w.de),meaning=discoveryMeanings(w.de);
+ let pool=data.words.filter(x=>x.id!==w.id&&x.de&&x.part_of_speech===w.part_of_speech);
+ function suitable(x){
+  const other=discoveryMeanings(x.de);
+  return ![...other].some(m=>meaning.has(m)) && ![...meaning].some(m=>other.has(m)) &&
+   ![...other].some(m=>m.length>=4&&[...meaning].some(y=>y.includes(m)||m.includes(y)));
+ }
+ pool=pool.filter(suitable);
+ // Some multiword expressions have no three safe distractors within their word class.
+ // Extend the candidate set without allowing duplicate answer texts or identical glosses.
+ if(pool.length<3){
+  const ids=new Set(pool.map(x=>x.id));
+  const extra=data.words.filter(x=>x.id!==w.id&&x.de&&!ids.has(x.id)&&suitable(x));
+  pool.push(...extra);
+ }
+ // Stable card-specific shuffling avoids the right answer jumping between rerenders.
+ const hash=String(w.id).split('').reduce((n,c)=>(Math.imul(n,31)+c.charCodeAt(0))>>>0,2166136261);
+ const sortKey=x=>String(x.id).split('').reduce((n,c)=>(Math.imul(n,33)+c.charCodeAt(0))>>>0,hash);
+ pool.sort((a,b)=>sortKey(a)-sortKey(b));
+ const uniquePool=[];const usedGloss=new Set([discoveryGloss(w.de)]);
+ for(const candidate of pool){const k=discoveryGloss(candidate.de);if(usedGloss.has(k))continue;usedGloss.add(k);uniquePool.push(candidate);if(uniquePool.length===3)break;}
+ const choices=[{value:w.de,correct:true},...uniquePool.map(x=>({value:x.de,correct:false}))];
+ if(choices.length!==4)return []; // Never block discovery if a suitable set is unavailable.
+ const at=hash%4;const right=choices.shift();choices.splice(at,0,right);
+ return choices;
 }
 function revealBrowse(){
  browseRevealed=true;
@@ -199,20 +234,34 @@ function renderPackageBrowse(){
  }
  const allSeen=browseCards.every(card=>seen.has(card.id));
  const last=browseIndex===browseCards.length-1;
- const nextLabel=discovery?(last?(allSeen?'Paket abschließen ✓':'Weitere Wörter ansehen →'):'Weiter →'):(last?'Fertig ✓':'Weiter →');
- $('browseContent').innerHTML=`<div class="browse-progress"><span>Wort ${browseIndex+1} von ${browseCards.length}</span><span>${discovery?`${seen.size}/${browseCards.length} angesehen`:escape(w.category||'')}</span></div>
+ const nextLabel=discovery?(last?(allSeen?'Paket abschließen ✓':'Weitere Wörter entdecken →'):'Nächstes Wort →'):(last?'Fertig ✓':'Weiter →');
+ // Discovery uses a per-word MC prompt. Browsing keeps its old reveal behavior.
+ if(discovery && !browseRevealed && !discoveryOptions.length)discoveryOptions=discoveryChoices(w);
+ const picked=discoveryChoice!==null;
+ const optionHtml=discoveryOptions.length?
+  `<div class="discovery-options" role="group" aria-label="Bedeutung auswählen">${discoveryOptions.map((o,i)=>`<button type="button" class="discovery-option ${picked?(o.correct?'is-correct':i===discoveryChoice?'is-wrong':''):''}" data-discovery-choice="${i}" ${picked?'disabled':''} aria-label="Antwort ${'ABCD'[i]}: ${escape(o.value)}"><span class="discovery-option-letter">${'ABCD'[i]}</span><span>${escape(o.value)}</span>${picked&&o.correct?'<span aria-hidden="true">✓</span>':''}</button>`).join('')}</div>`:
+  `<button type="button" class="secondary" id="browseReveal">Bedeutung anzeigen</button>`;
+ const feedback=discovery&&picked?`<div class="discovery-feedback ${discoveryOptions[discoveryChoice]?.correct?'is-right':'is-try'}" role="status"><strong>${discoveryOptions[discoveryChoice]?.correct?'Genau!':'Gut versucht!'}</strong><p>Die Bedeutung ist <b>${escape(w.de)}</b>.</p>${w.example?`<p lang="es"><em>${escape(w.example)}</em></p>`:''}</div>`:'';
+ $('browseContent').innerHTML=`<div class="browse-progress"><span>Wort ${browseIndex+1} von ${browseCards.length}</span><span>${discovery?`${seen.size}/${browseCards.length} entdeckt`:escape(w.category||'')}</span></div>
   <div class="browse-word" lang="es">${escape(w.es)}</div>
-  ${browseRevealed?`<div class="browse-answer"><small>DEUTSCH</small><strong lang="de">${escape(w.de)}</strong>${w.example?`<p lang="es">${escape(w.example)}</p>`:''}</div>`:'<button type="button" class="secondary" id="browseReveal">Bedeutung entdecken</button>'}
+  ${window.PalabraAudio?.buttons(w.es,{label:"Learn-Wort",cardId:w.id})||""}
+  ${discovery?`<p class="discovery-question">Was bedeutet dieses Wort?</p>${browseRevealed&&!discoveryOptions.length?`<div class="browse-answer"><strong lang="de">${escape(w.de)}</strong></div>`:optionHtml}${feedback}`:
+   browseRevealed?`<div class="browse-answer"><small>DEUTSCH</small><strong lang="de">${escape(w.de)}</strong>${w.example?`<p lang="es">${escape(w.example)}</p>`:''}</div>`:optionHtml}
   <div class="browse-navigation"><button type="button" class="secondary" id="browsePrev" ${browseIndex===0?'disabled':''}>← Zurück</button><button type="button" class="primary" id="browseNext" ${discovery&&!browseRevealed&&!seen.has(w.id)?'disabled':''}>${nextLabel}</button></div>
-  <p class="footnote">${discovery?'Ansehen ist keine Prüfung. Erst nach dem kompletten Paket kommen die Wörter in die SRS-Wiederholung.':'Freies Durchblättern verändert keinen Lernstand oder SRS-Termin.'}</p>`;
+  <p class="footnote">${discovery?'Multiple Choice ist zum Kennenlernen da, nicht zur SRS-Bewertung. Erst nach dem vollständigen Paket beginnt die Wiederholung.':'Freies Durchblättern verändert weder Lernstand noch SRS-Termin.'}</p>`;
  const reveal=$('browseReveal');if(reveal)reveal.onclick=revealBrowse;
- $('browsePrev').onclick=()=>{if(browseIndex>0){browseIndex--;browseRevealed=false;renderPackageBrowse()}};
+ if(discovery){$('browseContent').querySelectorAll('[data-discovery-choice]').forEach(b=>b.onclick=()=>{
+  if(browseRevealed)return;
+  discoveryChoice=Number(b.dataset.discoveryChoice);
+  revealBrowse();
+ });}
+ $('browsePrev').onclick=()=>{if(browseIndex>0){browseIndex--;browseRevealed=false;discoveryChoice=null;discoveryOptions=[];renderPackageBrowse()}};
  $('browseNext').onclick=()=>{
   if(discovery&&last&&allSeen){finishDiscovery();return}
   if(last&&discovery){const idx=browseCards.findIndex(card=>!seen.has(card.id));browseIndex=idx>=0?idx:0}
   else if(last){selectedDeck=browseDeck;selectedPackage=browsePack;showLearnScreen('deck');return}
   else browseIndex++;
-  browseRevealed=false;
+  browseRevealed=false;discoveryChoice=null;discoveryOptions=[];
   if(discovery){const record=discoveryRecord(browseDeck,browsePack);if(record){record.lastIndex=browseIndex;save()}}
   renderPackageBrowse();
  };
@@ -261,7 +310,7 @@ function renderDeckTiles(){
   const id=DECK_ID(i),ws=data.words.filter(w=>deckOf(w)===id);
   const intro=ws.filter(w=>w.progress.passive.introducedOn).length;
   const due=ws.filter(w=>w.progress.passive.introducedOn&&w.progress.passive.due&&w.progress.passive.due<=iso()).length;
-  return `<button type="button" class="learn-deck-card" data-deck="${id}"><span class="learn-deck-number">${i+1}</span><span class="learn-item-content"><strong>Basis ${i+1} <span class="learn-deck-title">· ${escape(name)}</span></strong><small>${intro}/200 Wörter entdeckt · ${due} fällig</small><span class="learn-mini-progress"><span style="width:${Math.min(100,intro/2)}%"></span></span></span><span class="learn-item-arrow" aria-hidden="true">›</span></button>`;
+  return `<button type="button" class="learn-deck-card" data-deck="${id}"><span class="learn-deck-number">${i+1}</span><span class="learn-item-content"><strong>Basis ${i+1} <span class="learn-deck-title">· ${escape(name)}</span></strong><small>${intro}/200 entdeckt · ${due} fällig</small><span class="learn-mini-progress"><span style="width:${Math.min(100,intro/2)}%"></span></span></span><span class="learn-item-arrow" aria-hidden="true">›</span></button>`;
  }).join('');
  root.querySelectorAll('[data-deck]').forEach(btn=>btn.onclick=()=>chooseLearnDeck(btn.dataset.deck));
 }
@@ -269,12 +318,12 @@ function renderLearnPacks(){
  if(learnScreen!=='deck')return;
  $('learnDeckEyebrow').textContent=learnDeckName(selectedDeck).toUpperCase();
  $('learnDeckHeadline').textContent=fullDeckName(selectedDeck);
- $('learnDeckSubline').textContent='Entdecke neue Wörter frei und trainiere bereits bekannte Wörter mit SRS.';
+ $('learnDeckSubline').textContent='Wähle dein Paket.';
  const ws=data.words.filter(deckFilter);
  const ids=[...new Set(ws.map(w=>w.package))].sort((a,b)=>a-b);
  const next=withSelection(selectedDeck,'next','passive',()=>currentNextPackage());
  const body=[
-  `<button type="button" class="learn-pack-card learn-pack-featured" data-package="next"><span class="learn-pack-number">✦</span><span class="learn-item-content"><strong>Nächstes Entdeckerpaket</strong><small>${next===null?'Alle Wörter entdeckt – jetzt festigen':`Paket ${ws.find(w=>w.package===next)?.package_in_deck||''} · ${escape(ws.find(w=>w.package===next)?.learning_goal||'Entdecken')} · ohne SRS-Bewertung`}</small></span><span class="learn-item-arrow">›</span></button>`,
+  `<button type="button" class="learn-pack-card learn-pack-featured" data-package="next"><span class="learn-pack-number">✦</span><span class="learn-item-content"><strong>Nächstes Entdeckerpaket</strong><small>${next===null?'Alles entdeckt':`Paket ${ws.find(w=>w.package===next)?.package_in_deck||''} · 20 Wörter`}</small></span><span class="learn-item-arrow">›</span></button>`,
   `<button type="button" class="learn-pack-card" data-package="all"><span class="learn-pack-number">↻</span><span class="learn-item-content"><strong>Gesamtes Deck wiederholen</strong><small>Nur bereits eingeführte Wörter</small></span><span class="learn-item-arrow">›</span></button>`
  ];
  for(const id of ids){
@@ -379,7 +428,7 @@ function makeOptions(w,dir){
  const arr=[correct,...pool.slice(0,3).map(x=>x[target])];
  for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]]}return arr;
 }
-function cardTop(w){return `<div class="flashcard"><div class="direction">${current.dir==='passive'?'ESPAÑOL → DEUTSCH':'DEUTSCH → ESPAÑOL'}</div><h2>${escape(current.dir==='passive'?w.es:w.de)}</h2><div class="category">${escape(w.category||'Vokabel')} · ${escape(WORD_CLASSES[w.part_of_speech]||'Wort')}</div></div>`}
+function cardTop(w){return `<div class="flashcard"><div class="direction">${current.dir==='passive'?'ESPAÑOL → DEUTSCH':'DEUTSCH → ESPAÑOL'}</div><h2>${escape(current.dir==='passive'?w.es:w.de)}</h2>${(current.dir==='passive'||phase==='reveal'||phase==='graded')?(window.PalabraAudio?.buttons(w.es,{compact:true,label:"Vokabel",cardId:w.id})||''):''}<div class="category">${escape(w.category||'Vokabel')} · ${escape(WORD_CLASSES[w.part_of_speech]||'Wort')}</div></div>`}
 function renderStudy(){const area=$('studyArea');$('sessionProgress').textContent=`${sessionCompleted} geschafft · ${queue.length+(current?1:0)} offen`;$('progressFill').style.width=`${Math.min(100,100*sessionCompleted/Math.max(1,sessionTotal))}%`;if(!current){const avail=sessionCollectionId?collectionDueCards(getCollection(sessionCollectionId),selectedDirection):candidates(selectedDirection);const more=avail.length>0;const total=sessionGrades.free+sessionGrades.mc+sessionGrades.unknown;const percent=total?Math.round(100*sessionGrades.free/total):0;area.innerHTML=`<div class="empty finish"><div class="big-emoji">🎉</div><h2>${sessionCollectionId?'Sammlungsrunde geschafft!':'¡Muy bien! Wiederholung geschafft!'}</h2><p>${sessionCollectionId?'Deine fälligen Sammlungswörter wurden im normalen SRS bewertet.':'Stark gemacht! Jeder freie Abruf bringt dich weiter.'}</p><div class="session-stats"><div><strong>${sessionUnique.size}</strong><small>Verschiedene Wörter</small></div><div><strong>${percent} %</strong><small>Frei gewusst</small></div><div><strong>${sessionGrades.free}</strong><small>Frei richtig</small></div><div><strong>${sessionGrades.mc}</strong><small>Mit Auswahl</small></div><div><strong>${sessionGrades.unknown}</strong><small>Noch üben</small></div></div><p class="footnote">${total} Antworten inklusive Wiederholungsversuchen. Die Wiederholungstermine bleiben gespeichert.</p>${more?'<button class="primary" id="continueBtn">Weiterlernen →</button>':sessionCollectionId?'<div class="done-note">In dieser Sammlung sind derzeit keine weiteren Karten fällig.</div>':'<div class="done-note">Für dieses Deck sind aktuell keine weiteren Karten fällig. ¡Hasta pronto!</div>'}<button class="secondary" id="finishBtn">${sessionCollectionId?'Zur Sammlung':'Zur Übersicht'}</button></div>`;$('finishBtn').onclick=()=>{if(sessionCollectionId){wordsSubview='collections';selectedCollectionId=sessionCollectionId;navigate('words')}else navigate('learn-hub')};if(more)$('continueBtn').onclick=()=>sessionCollectionId?startCollectionReview(sessionCollectionId,selectedDirection):startSession();return}
 const w=wordFor(current);let html=cardTop(w);
 if(phase==='question'){const mcAvailable=optionPool(w,current.dir).length>=3;html+=`<p class="prompt">Überlege dir die Übersetzung. Du musst nichts eintippen.</p><div class="actions"><button class="primary" id="knowBtn">Weiß ich → Lösung zeigen</button><button class="secondary" id="mcBtn" ${mcAvailable?'':'disabled title="Nicht genügend Antworten derselben Wortart"'}>Multiple Choice</button><button class="ghost" id="unknownBtn">Weiß nicht → Lösung</button></div>${mcAvailable?'':'<p class="prompt">Für diese Wortart gibt es noch nicht genügend unterschiedliche MC-Antworten.</p>'}` }
@@ -431,7 +480,7 @@ function renderWords(){
  (level==='all'||masteryBucket(w,statsDirection)===level));
  const groups=new Map();for(const w of filtered){const key=w.category||'Alltag';if(!groups.has(key))groups.set(key,[]);groups.get(key).push(w)}
  const sorted=[...groups].sort(([a],[b])=>a.localeCompare(b,'de'));
- $('wordList').innerHTML=sorted.map(([cat,words])=>`<details class="word-group" ${q?'open':''}><summary><span>${escape(cat)}</span><span class="group-count">${words.length} Wörter <span aria-hidden="true">⌄</span></span></summary><div class="group-words">${words.map(w=>`<div class="word-row"><div class="word-row-top"><b>${escape(w.es)}</b>${(devMode||isDiscovered(w))?`<button type="button" class="word-add-button" data-add-word="${escape(w.id)}" aria-label="${escape(w.es)} zu Sammlung hinzufügen" title="Zu Sammlung hinzufügen">＋</button>`:''}</div><span>${escape(w.de)}</span><small>${mastered(w)?'Gemeistert':eligibleForActive(w)?'Aktiv freigeschaltet':'Im Aufbau'} · ${w.deck_id==='palabra-story-lexicon'?escape(w.source||'Story-Wort'):`Basis ${escape((w.deck_id||'').slice(-1))} / Paket ${escape(w.package_in_deck)}`} · ${escape(WORD_CLASSES[w.part_of_speech]||'Wort')}</small></div>`).join('')}</div></details>`).join('')||`<div class="empty-words"><div>📖</div><h2>${data.words.some(isDiscovered)?'Keine passenden Wörter':'Deine Sammlung wartet auf dich!'}</h2><p>${data.words.some(isDiscovered)?'Versuche einen anderen Suchbegriff oder Filter.':'Entdecke zuerst ein Themenpaket. Danach findest du seine Wörter hier und im SRS.'}</p></div>`;
+ $('wordList').innerHTML=sorted.map(([cat,words])=>`<details class="word-group" ${q?'open':''}><summary><span>${escape(cat)}</span><span class="group-count">${words.length} Wörter <span aria-hidden="true">⌄</span></span></summary><div class="group-words">${words.map(w=>`<div class="word-row"><div class="word-row-top"><b>${escape(w.es)}</b>${window.PalabraAudio?.buttons(w.es,{compact:true,label:"Gespeichertes Wort",cardId:w.id})||""}${(devMode||isDiscovered(w))?`<button type="button" class="word-add-button" data-add-word="${escape(w.id)}" aria-label="${escape(w.es)} zu Sammlung hinzufügen" title="Zu Sammlung hinzufügen">＋</button>`:''}</div><span>${escape(w.de)}</span><small>${mastered(w)?'Gemeistert':eligibleForActive(w)?'Aktiv freigeschaltet':'Im Aufbau'} · ${w.deck_id==='palabra-story-lexicon'?escape(w.source||'Story-Wort'):`Basis ${escape((w.deck_id||'').slice(-1))} / Paket ${escape(w.package_in_deck)}`} · ${escape(WORD_CLASSES[w.part_of_speech]||'Wort')}</small></div>`).join('')}</div></details>`).join('')||`<div class="empty-words"><div>📖</div><h2>${data.words.some(isDiscovered)?'Keine passenden Wörter':'Deine Sammlung wartet auf dich!'}</h2><p>${data.words.some(isDiscovered)?'Versuche einen anderen Suchbegriff oder Filter.':'Entdecke zuerst ein Themenpaket. Danach findest du seine Wörter hier und im SRS.'}</p></div>`;
  renderWordsSubview();
 }
 
@@ -594,7 +643,7 @@ function renderCollections(){
     <div class="panel collection-detail"><div class="collection-detail-heading"><div><div class="eyebrow">MEINE SAMMLUNG</div><h2>${escape(c.name)}</h2><p class="muted">${words.length} ${words.length===1?'Wort':'Wörter'} · ${passive} passiv fällig · ${active} aktiv fällig</p></div><button class="collection-icon-action" data-col-action="rename" aria-label="Sammlung umbenennen" title="Umbenennen">✎</button></div>
     <div class="collection-review-actions"><button class="primary" data-col-action="review-passive" ${passive?'':'disabled'}>Passiv wiederholen (${passive})</button><button class="secondary" data-col-action="review-active" ${active?'':'disabled'}>Aktiv wiederholen (${active})</button></div>
     <p class="footnote">Hier übst du nur fällige Karten. Die Bewertungen fließen in denselben SRS-Fortschritt wie beim normalen Lernen.</p>
-    <div class="collection-word-list">${words.length?words.map(w=>`<div class="collection-word-row"><div><strong>${escape(w.es)}</strong><span>${escape(w.de)}</span></div><button class="collection-icon-action" data-col-action="remove" data-word-id="${escape(w.id)}" aria-label="${escape(w.es)} entfernen" title="Aus Sammlung entfernen">×</button></div>`).join(''):'<p class="muted">Noch keine Wörter in dieser Sammlung.</p>'}</div>
+    <div class="collection-word-list">${words.length?words.map(w=>`<div class="collection-word-row"><div><strong>${escape(w.es)}</strong>${window.PalabraAudio?.buttons(w.es,{compact:true,label:"Sammlungswort",cardId:w.id})||""}<span>${escape(w.de)}</span></div><button class="collection-icon-action" data-col-action="remove" data-word-id="${escape(w.id)}" aria-label="${escape(w.es)} entfernen" title="Aus Sammlung entfernen">×</button></div>`).join(''):'<p class="muted">Noch keine Wörter in dieser Sammlung.</p>'}</div>
     <div class="collection-add-section"><h3>Wörter hinzufügen</h3><p class="muted">${devMode?'🧪 Entwicklermodus: Du kannst hier auch noch ungesehene Wörter testweise zuordnen. Sie werden ohne SRS-Änderung gespeichert.':'Zur Auswahl stehen nur Wörter, die du bereits entdeckt hast.'}</p><input type="search" id="collectionSearch" placeholder="Spanisches oder deutsches Wort suchen …" value="${escape(collectionQuery)}" aria-label="Entdeckte Wörter für Sammlung suchen"><div id="collectionSearchResults" class="collection-search-results">${matches.map(w=>`<button class="collection-search-row" data-col-action="add" data-word-id="${escape(w.id)}"><span><strong>${escape(w.es)}</strong><small>${escape(w.de)}</small></span><b>＋</b></button>`).join('')||'<p class="muted">Keine weiteren passenden entdeckten Wörter.</p>'}</div></div>
     <button class="ghost collection-delete" data-col-action="delete">Sammlung löschen</button></div>`;
   const search=$('collectionSearch');if(search){search.oninput=e=>{
