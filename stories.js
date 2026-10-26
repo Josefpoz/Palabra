@@ -206,6 +206,25 @@ window.PalabraStories=(()=>{'use strict';
     const found=findToken(id);if(!found)return;selectedToken=id;selectedSentence=found.sentence;activePopupSentence=false;showPanel();highlight();
     requestAnimationFrame(()=>{const panel=$('storyWordPanel'),line=document.querySelector(`.story-sentence[data-sentence-id="${found.sentence.id}"]`);if(!panel||!line||panel.hidden)return;const r=line.getBoundingClientRect(),top=105,bottom=panel.getBoundingClientRect().top-14;if(r.bottom>bottom||r.top<top)window.scrollBy({top:r.top-top,behavior:'smooth'})});
   }
+  // Lexikon 2.0 · read-only, additive metadata; never alter SRS/word identity.
+  function nounAndIpa(token){
+    const lex=window.PALABRA_LEXICON;
+    const ref=lex?.tokens?.[token.id];
+    const entry=ref?lex?.entries?.[ref.lexeme_id]:null;
+    const key=String(token.text||'').trim().toLocaleLowerCase('es');
+    const lemma=String(token.lemma||'').trim().toLocaleLowerCase('es');
+    const ipa=lex?.pronunciations?.form_ipa?.[key] || (key===lemma?entry?.ipa:'') || '';
+    const isNoun=token.pos==='noun'&&entry?.part_of_speech==='noun';
+    const gender=isNoun?entry?.gender:null;
+    const numberPlural=!!gender && (/^(los|las|los\/las)\s/.test(entry?.display_with_article||'') || (key!==lemma && /s$/.test(key) && !/s$/.test(lemma)));
+    const article=gender==='m/f'?(numberPlural?'los/las':'el/la'):
+      gender==='m'?(numberPlural?'los':entry.article_singular):
+      gender==='f'?(numberPlural?'las':entry.article_singular):'';
+    const headword=article?article+' '+token.text:token.text;
+    const gram=gender==='m'?'maskulin':gender==='f'?'feminin':gender==='m/f'?'maskulin / feminin':'';
+    const articleLemma=gender?entry?.display_with_article:'';
+    return {entry,ipa,gender,gram,headword,articleLemma,note:isNoun?entry?.gender_note:'',review:isNoun?entry?.gender_review:null};
+  }
   function meaningfulLiteral(t){return typeof t.literal==='string'&&t.literal.trim()&&t.literal.trim().toLocaleLowerCase('de')!==String(t.de||'').trim().toLocaleLowerCase('de')}
 
   function pilotHtml(tokenId){
@@ -213,7 +232,7 @@ window.PalabraStories=(()=>{'use strict';
     if(!info)return '';
     const collections=api.collections();
     const alternatives=info.alternatives||[];
-    return `<section class="story-lexicon-box"><div class="story-lexicon-title"><span>✧ PALABRA LEXIKON · ${esc(info.storyTitle||'STORY')} ${esc(info.level)}</span><strong>${esc(info.lemma)}</strong></div>
+    return `<section class="story-lexicon-box"><div class="story-lexicon-title"><span>✧ PALABRA LEXIKON · ${esc(info.storyTitle||'STORY')} ${esc(info.level)}</span><strong>${esc(nounAndIpa(findToken(tokenId)?.token||{}).articleLemma || info.lemma)}</strong></div>
       <p>Im Satz: <b>${esc(info.meaning)}</b></p><p class="story-lexicon-card-meaning">Lernkarte: <b>${esc(info.german)}</b></p>
       ${alternatives.length?`<details class="story-lexicon-meanings"><summary>Weitere Bedeutungen (${alternatives.length})</summary><ul>${alternatives.map(a=>`<li><b>${esc(a.label)}</b>: ${esc(a.german)}</li>`).join('')}</ul><small>Verschiedene Bedeutungen können unterschiedliche Lernkarten haben.</small></details>`:''}
       ${!info.reviewed?'<small class="story-lexicon-caution">Grundbedeutung noch nicht abschließend redaktionell geprüft · Testkarte</small>':''}
@@ -244,8 +263,13 @@ window.PalabraStories=(()=>{'use strict';
     const {token,sentence}=f;
     const focus=sentence.grammarFocus&&grammarSentences.has(sentence.id)?sentence.grammarFocus:null;
     const spans=focus?.spans.filter(sp=>sp.members.includes(token.id))||[];
+    const linguistic=nounAndIpa(token);
+    const nounDetail=linguistic.gender?`<p class="story-noun-article"><strong>Artikel · Grundform</strong><span lang="es">${esc(linguistic.articleLemma)}</span></p><p class="story-noun-gender"><strong>Genus</strong>${esc(linguistic.gram)}</p>`:'';
+    const nounNote=linguistic.note?`<p class="story-panel-gender-note"><span>GUT ZU WISSEN</span>${esc(linguistic.note)}</p>`:'';
+    const ipaHtml=linguistic.ipa?`<span class="story-headword-ipa" title="IPA · breite lateinamerikanische Aussprache, vorläufig regelbasiert">${esc(linguistic.ipa)}</span>`:'';
+
     panel.hidden=false;
-    panel.innerHTML=`<div class="story-panel-handle" aria-hidden="true"></div><div class="story-panel-header"><div><span class="story-panel-label">WORT ERKLÄRT</span><h3 lang="es">${esc(token.text)}</h3></div><button type="button" class="story-panel-close" id="storyCloseWord" aria-label="Erklärung schließen">✕</button></div><div class="story-panel-audio">${window.PalabraAudio?.buttons(token.text,{label:"Wortform"})||""}${token.lemma&&token.lemma.toLocaleLowerCase("es")!==token.text.toLocaleLowerCase("es")?`<div class="story-lemma-audio"><span>Grundform: <em lang="es">${esc(token.lemma)}</em></span>${window.PalabraAudio?.buttons(token.lemma,{compact:true,label:"Grundform"})||""}</div>`:""}</div><div class="story-panel-meta"><span>${esc(LABELS[token.pos]||token.pos)}</span><span>${esc(token.form)}</span></div><div class="story-panel-details"><p><strong>Grundform</strong>${esc(token.lemma)}</p><p><strong>Bedeutung</strong>${esc(token.de)}</p>${meaningfulLiteral(token)?`<p class="story-literal-emphasis"><strong>Wörtlich</strong>${esc(token.literal)}</p>`:''}</div>${token.note?`<p class="story-panel-note">${esc(token.note)}</p>`:''}${spans.map(sp=>`<div class="story-panel-relation"><span>💡 AUSGEWÄHLTER LERNTIPP</span><strong>${esc(sp.label)}</strong><p>${esc(focus.why)}</p></div>`).join('')}${pilotHtml(token.id)}<button type="button" class="story-panel-sentence" id="storyPanelTranslate">${activePopupSentence?'Satzübersetzung verbergen':'🌐 Ganzen Satz übersetzen'}</button>${activePopupSentence?`<div class="story-panel-fullsentence">${sentenceTranslation(sentence)}</div>`:''}`;
+    panel.innerHTML=`<div class="story-panel-handle" aria-hidden="true"></div><div class="story-panel-header"><div><span class="story-panel-label">WORT ERKLÄRT</span><div class="story-headword-line"><h3 lang="es">${esc(linguistic.headword)}</h3>${ipaHtml}</div></div><button type="button" class="story-panel-close" id="storyCloseWord" aria-label="Erklärung schließen">✕</button></div><div class="story-panel-audio">${window.PalabraAudio?.buttons(token.text,{label:"Wortform"})||""}${token.lemma&&token.lemma.toLocaleLowerCase("es")!==token.text.toLocaleLowerCase("es")?`<div class="story-lemma-audio"><span>Grundform: <em lang="es">${esc(token.lemma)}</em></span>${window.PalabraAudio?.buttons(token.lemma,{compact:true,label:"Grundform"})||""}</div>`:""}</div><div class="story-panel-meta"><span>${esc(LABELS[token.pos]||token.pos)}</span><span>${esc(token.form)}</span></div><div class="story-panel-details"><p><strong>Grundform</strong><span lang="es">${esc(linguistic.articleLemma||token.lemma)}</span></p><p><strong>Bedeutung</strong>${esc(token.de)}</p>${nounDetail}${meaningfulLiteral(token)?`<p class="story-literal-emphasis"><strong>Wörtlich</strong>${esc(token.literal)}</p>`:''}</div>${nounNote}${token.note?`<p class="story-panel-note">${esc(token.note)}</p>`:''}${spans.map(sp=>`<div class="story-panel-relation"><span>💡 AUSGEWÄHLTER LERNTIPP</span><strong>${esc(sp.label)}</strong><p>${esc(focus.why)}</p></div>`).join('')}${pilotHtml(token.id)}<button type="button" class="story-panel-sentence" id="storyPanelTranslate">${activePopupSentence?'Satzübersetzung verbergen':'🌐 Ganzen Satz übersetzen'}</button>${activePopupSentence?`<div class="story-panel-fullsentence">${sentenceTranslation(sentence)}</div>`:''}`;
     $('storyCloseWord').onclick=closePanel;setupPilotButtons(token.id);$('storyPanelTranslate').onclick=()=>{activePopupSentence=!activePopupSentence;showPanel()};
   }
   document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&selectedToken)closePanel()});

@@ -686,3 +686,46 @@ button.pillar-card:focus-visible {outline:3px solid #83dbc1;outline-offset:3px;}
 .pron-compare-intro p{color:#b6c9d1}
 .pron-compare-card .palabra-audio-controls{min-width:0}
 .pron-compare-card button{max-width:100%}
+
+/* Palabra Lexikon 2.0 – article, grammatical gender and contextual IPA. */
+.story-headword-line{display:flex;align-items:baseline;flex-wrap:wrap;gap:5px 12px;margin-top:4px}
+.story-panel-header .story-headword-line h3{margin:0 0 5px;line-height:1.28}
+.story-headword-ipa{font-size:15px;font-weight:500;letter-spacing:.025em;color:#d3e7f1;line-height:1.35;overflow-wrap:anywhere;font-family:'Segoe UI',Arial,system-ui,sans-serif}
+.story-panel-details p.story-noun-article{background:#24453b;border:1px solid #4b806d}
+.story-panel-details p.story-noun-article span{font-weight:750;font-size:15px;color:#ecfff4}
+.story-panel-details p.story-noun-gender{background:#243d49}
+.story-panel-gender-note{margin:8px 0;padding:10px 12px;background:#2a4039;border-left:3px solid #8fcbae;border-radius:9px;font-size:12px;line-height:1.55;color:#deeee6}
+.story-panel-gender-note span{display:block;color:#b9e5c9;font-size:10px;letter-spacing:.07em;font-weight:750;margin-bottom:3px}
+@media(max-width:390px){.story-headword-ipa{font-size:14px}.story-panel-details p.story-noun-article span{font-size:13px}}
+
+/* Palabra 0.7a.8-P4 – dialogue playlist and meaningful pronunciation pairs. */
+.dialogue-playback-progress{font-size:.92rem;color:var(--muted,#9eaab2);font-variant-numeric:tabular-nums;min-height:1.2em}
+.dialogue-original{margin:-.45rem 0 1.2rem;font-size:.87rem;color:var(--muted,#9eaab2)}
+.dialogue-original summary{cursor:pointer;display:inline-block;padding:.45rem 0;min-height:36px;text-decoration:underline;text-underline-offset:3px}
+.dialogue-original p{margin:.4rem 0;font-size:.9rem}
+.dialogue-original button{min-height:40px;margin:.35rem 0}
+.dialogue-playback button:disabled{opacity:.4;cursor:not-allowed}
+.chat-line.is-speaking .chat-bubble{outline:3px solid var(--accent,#80baa2);outline-offset:3px}
+.pron-pair-list{display:grid;gap:14px;margin-bottom:22px}
+.pron-pair{background:#172c3f;border:1px solid #3f576b;border-radius:18px;padding:17px;color:#f1f8f8}
+.pron-pair-words{display:grid;grid-template-columns:minmax(0,1fr) 30px minmax(0,1fr);align-items:start;gap:7px}
+.pron-pair-word{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0}
+.pron-pair-word>strong{font-size:1.45rem;line-height:1.15;overflow-wrap:anywhere}
+.pron-pair-word>span:not(.palabra-audio-controls){color:#d0e0e7;font-size:.91rem;line-height:1.4}
+.pron-pair-equals{text-align:center;font-size:1.6rem;color:#9edbbf;padding-top:.12rem}
+.pron-pair-ipa{text-align:center;color:#cceadc;font-size:1.15rem;margin:12px 0 5px;font-weight:600}
+.pron-pair-ipa small{display:block;font-size:.78rem;color:#b4c8d1;font-weight:400;margin-top:3px}
+.pron-pair-audio{text-align:center;display:grid;justify-items:center;gap:4px;margin:10px auto}
+.pron-audio-intro{font-size:.8rem;color:#b8cad2}
+.pron-pair p{font-size:.91rem;line-height:1.5;color:#c6d5de;margin:11px 0 0}
+.pron-pair-individual-ipa{font-size:.98rem!important;color:#bfe3d1!important;font-weight:600}
+.pron-pair-different .pron-pair-word .palabra-audio-controls,.pron-pair-different .pron-pair-word .palabra-grammar-audio-controls{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.pron-pair .palabra-audio-controls button,.pron-pair .palabra-grammar-audio-controls button{min-height:41px;white-space:normal}
+.pron-pair .pron-audio-missing{font-size:.82rem;color:#b7cad1;margin:.5rem 0}
+.pron-example{display:flex;justify-content:space-between;flex-wrap:wrap;align-items:center;gap:12px;border:1px solid #3f576b;border-radius:16px;padding:14px;background:#172c3f;color:#f1f8f8}
+.pron-example>div:first-child{display:grid;gap:2px}
+.pron-example strong{font-size:1.2rem}
+.pron-example span,.pron-example small{color:#d0e0e7}
+@media(max-width:430px){.pron-pair{padding:13px}.pron-pair-word>strong{font-size:1.25rem}.pron-pair-words{grid-template-columns:minmax(0,1fr) 20px minmax(0,1fr);gap:6px}.pron-pair-equals{font-size:1.3rem}.dialogue-playback{gap:.5rem}.dialogue-playback button{font-size:.91rem}}
+
+.dialogue-audio-qa{display:inline-flex;align-self:flex-start;color:#bdcdd2;background:#283f4c;padding:3px 9px;border-radius:12px;font-size:.71rem;font-weight:600;letter-spacing:.02em;margin-top:3px}
